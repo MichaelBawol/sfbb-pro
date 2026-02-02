@@ -82,6 +82,21 @@ export default function Settings() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Update form when business data loads
+  useEffect(() => {
+    if (business) {
+      setBusinessForm({
+        name: business.name || '',
+        address: business.address || '',
+        phone: business.phone || '',
+        email: business.email || '',
+        managerName: business.managerName || '',
+        foodHygieneRating: business.foodHygieneRating ?? 5,
+        lastInspectionDate: business.lastInspectionDate || '',
+      })
+    }
+  }, [business])
+
   const handlePinSubmit = (pin: string): boolean => {
     if (user?.pin === pin) {
       unlockSettings(pin)
