@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAppContext } from '../hooks/useAppContext'
-import { DiaryEntry, FourWeeklyReview } from '../types'
+import { FourWeeklyReview } from '../types'
 import BottomSheet from './BottomSheet'
 import {
   CalendarIcon,
@@ -63,7 +63,6 @@ function getDaysInWeek(weekCommencing: Date): { date: Date; dayOfWeek: string; d
 export default function DiaryAndReview() {
   const {
     user,
-    diaryEntries,
     weeklyExtraChecks,
     fourWeeklyReviews,
     addDiaryEntry,
