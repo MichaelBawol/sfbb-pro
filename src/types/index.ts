@@ -1,0 +1,298 @@
+// Core types for SFBB Pro
+
+export interface User {
+  id: string
+  email: string
+  name: string
+  role: 'admin' | 'manager' | 'staff'
+  businessId: string
+  pin?: string
+}
+
+export type EmployeePrivilege =
+  | 'view_dashboard'
+  | 'log_temperature'
+  | 'complete_checklists'
+  | 'complete_cleaning'
+  | 'manage_suppliers'
+  | 'manage_allergens'
+  | 'view_records'
+  | 'export_records'
+  | 'manage_employees'
+  | 'access_settings'
+
+export const ROLE_PRIVILEGES: Record<'admin' | 'manager' | 'staff', EmployeePrivilege[]> = {
+  admin: [
+    'view_dashboard',
+    'log_temperature',
+    'complete_checklists',
+    'complete_cleaning',
+    'manage_suppliers',
+    'manage_allergens',
+    'view_records',
+    'export_records',
+    'manage_employees',
+    'access_settings',
+  ],
+  manager: [
+    'view_dashboard',
+    'log_temperature',
+    'complete_checklists',
+    'complete_cleaning',
+    'manage_suppliers',
+    'manage_allergens',
+    'view_records',
+    'export_records',
+    'manage_employees',
+  ],
+  staff: [
+    'view_dashboard',
+    'log_temperature',
+    'complete_checklists',
+    'complete_cleaning',
+    'view_records',
+  ],
+}
+
+export const PRIVILEGE_LABELS: Record<EmployeePrivilege, string> = {
+  view_dashboard: 'View Dashboard',
+  log_temperature: 'Log Temperatures',
+  complete_checklists: 'Complete Checklists',
+  complete_cleaning: 'Complete Cleaning Tasks',
+  manage_suppliers: 'Manage Suppliers',
+  manage_allergens: 'Manage Allergens & Dishes',
+  view_records: 'View Records',
+  export_records: 'Export Records',
+  manage_employees: 'Manage Employees',
+  access_settings: 'Access Settings',
+}
+
+export interface Business {
+  id: string
+  name: string
+  address: string
+  phone: string
+  email: string
+  logoUrl?: string
+  managerName: string
+  foodHygieneRating?: number
+  lastInspectionDate?: string
+}
+
+export interface Employee {
+  id: string
+  name: string
+  role: 'admin' | 'manager' | 'staff'
+  email?: string
+  phone?: string
+  pin?: string
+  startDate: string
+  certificates: Certificate[]
+  trainingRecords: TrainingRecord[]
+  customPrivileges?: EmployeePrivilege[]
+}
+
+export interface Certificate {
+  id: string
+  name: string
+  issueDate: string
+  expiryDate: string | null
+  fileUrl?: string
+}
+
+export interface TrainingRecord {
+  id: string
+  title: string
+  date: string
+  notes?: string
+}
+
+export interface ChecklistItem {
+  id: string
+  text: string
+  completed: boolean
+  completedAt?: string
+  completedBy?: string
+  notes?: string
+}
+
+export interface Checklist {
+  id: string
+  type: 'opening' | 'closing' | 'weekly'
+  date: string
+  items: ChecklistItem[]
+  completedBy?: string
+  remarks?: string
+  signedOff: boolean
+}
+
+export interface CleaningTask {
+  id: string
+  text: string
+  frequency: 'daily' | 'weekly' | 'monthly'
+  completed: boolean
+  completedAt?: string
+  completedBy?: string
+}
+
+export interface CleaningRecord {
+  id: string
+  date: string
+  frequency: 'daily' | 'weekly' | 'monthly'
+  tasks: CleaningTask[]
+  completedBy?: string
+  signedOff: boolean
+}
+
+export interface TemperatureLog {
+  id: string
+  type: 'fridge' | 'freezer' | 'hot_hold' | 'delivery' | 'dishwasher' | 'probe_calibration'
+  applianceId?: string
+  applianceName: string
+  temperature?: number
+  boilingTemp?: number
+  iceTemp?: number
+  time: string
+  date: string
+  loggedBy: string
+  notes?: string
+  isCompliant: boolean
+}
+
+export interface Appliance {
+  id: string
+  name: string
+  type: 'fridge' | 'freezer' | 'hot_hold' | 'dishwasher' | 'probe'
+  location?: string
+  minTemp?: number
+  maxTemp?: number
+}
+
+export interface Supplier {
+  id: string
+  name: string
+  contact: string
+  phone?: string
+  email?: string
+  address?: string
+  products: string[]
+  lastDelivery?: string
+  rating?: number
+  notes?: string
+}
+
+export interface Dish {
+  id: string
+  name: string
+  description?: string
+  category?: string
+  allergens: string[]
+  crossContaminationRisks: string[]
+  cookingInstructions?: string
+  storageInstructions?: string
+}
+
+export interface WasteLog {
+  id: string
+  date: string
+  time: string
+  itemName: string
+  quantity: string
+  reason: string
+  loggedBy: string
+  cost?: number
+}
+
+export interface MaintenanceLog {
+  id: string
+  date: string
+  applianceId?: string
+  applianceName: string
+  type: 'repair' | 'service' | 'inspection'
+  description: string
+  performedBy: string
+  cost?: number
+  nextServiceDate?: string
+}
+
+export interface SpotCheck {
+  id: string
+  date: string
+  time: string
+  area: string
+  checkedBy: string
+  items: {
+    item: string
+    status: 'pass' | 'fail' | 'na'
+    notes?: string
+  }[]
+  overallResult: 'pass' | 'fail'
+  correctiveAction?: string
+}
+
+export interface Alert {
+  id: string
+  type: 'certificate_expiry' | 'temperature' | 'overdue_task' | 'inspection'
+  severity: 'low' | 'medium' | 'high' | 'critical'
+  title: string
+  message: string
+  date: string
+  acknowledged: boolean
+  relatedId?: string
+}
+
+export interface DailyRecord {
+  id: string
+  date: string
+  openingChecklist?: Checklist
+  closingChecklist?: Checklist
+  temperatureLogs: TemperatureLog[]
+  cleaningTasks: CleaningTask[]
+  wasteLogs: WasteLog[]
+  incidents?: string[]
+  completedBy?: string
+  managerSignOff?: boolean
+  remarks?: string
+}
+
+// Customizable checklist templates
+export interface ChecklistTemplates {
+  openingChecks: string[]
+  closingChecks: string[]
+  dailyCleaning: string[]
+  weeklyCleaning: string[]
+  monthlyCleaning: string[]
+}
+
+// Allergen list (UK FSA standard 14 allergens)
+export const ALLERGENS = [
+  'Celery',
+  'Cereals containing gluten',
+  'Crustaceans',
+  'Eggs',
+  'Fish',
+  'Lupin',
+  'Milk',
+  'Molluscs',
+  'Mustard',
+  'Nuts',
+  'Peanuts',
+  'Sesame',
+  'Soybeans',
+  'Sulphur dioxide'
+] as const
+
+export type Allergen = typeof ALLERGENS[number]
+
+// Temperature compliance thresholds
+export const TEMP_THRESHOLDS = {
+  fridge: { min: 0, max: 5 },
+  freezer: { min: -25, max: -18 },
+  hot_hold: { min: 63, max: 100 },
+  delivery_chilled: { min: 0, max: 8 },
+  delivery_frozen: { min: -25, max: -15 },
+  dishwasher_wash: { min: 55, max: 65 },
+  dishwasher_rinse: { min: 82, max: 90 },
+  probe_ice: { min: -1, max: 1 },
+  probe_boiling: { min: 99, max: 101 },
+}

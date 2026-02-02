@@ -1,0 +1,154 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply bg-slate-50 text-slate-900 antialiased;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply px-5 py-3.5 rounded-xl font-semibold transition-all duration-200
+           focus:outline-none focus:ring-2 focus:ring-offset-2
+           disabled:opacity-50 disabled:cursor-not-allowed
+           active:scale-[0.98] min-h-[48px] text-base;
+  }
+
+  .btn-primary {
+    @apply btn bg-sfbb-600 text-white hover:bg-sfbb-700 focus:ring-sfbb-500
+           active:bg-sfbb-800;
+  }
+
+  .btn-secondary {
+    @apply btn bg-slate-200 text-slate-700 hover:bg-slate-300 focus:ring-slate-400
+           active:bg-slate-400;
+  }
+
+  .btn-success {
+    @apply btn bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-500
+           active:bg-emerald-800;
+  }
+
+  .btn-danger {
+    @apply btn bg-red-600 text-white hover:bg-red-700 focus:ring-red-500
+           active:bg-red-800;
+  }
+
+  .btn-sm {
+    @apply px-4 py-2.5 text-sm min-h-[40px];
+  }
+
+  .card {
+    @apply bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden;
+  }
+
+  .input {
+    @apply w-full px-4 py-4 rounded-xl border-2 border-slate-300 text-base
+           focus:outline-none focus:ring-2 focus:ring-sfbb-500 focus:border-sfbb-500
+           placeholder:text-slate-400 transition-all min-h-[52px];
+  }
+
+  .label {
+    @apply block text-sm font-semibold text-slate-700 mb-2;
+  }
+
+  .badge {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-sm font-medium;
+  }
+
+  .badge-success {
+    @apply badge bg-emerald-100 text-emerald-800;
+  }
+
+  .badge-warning {
+    @apply badge bg-amber-100 text-amber-800;
+  }
+
+  .badge-danger {
+    @apply badge bg-red-100 text-red-800;
+  }
+
+  .badge-info {
+    @apply badge bg-blue-100 text-blue-800;
+  }
+
+  /* Touch-friendly list items */
+  .touch-item {
+    @apply flex items-center gap-4 p-4 min-h-[60px] active:bg-slate-50
+           transition-colors cursor-pointer select-none;
+  }
+
+  /* Touch-friendly icon buttons */
+  .icon-btn {
+    @apply p-3 rounded-xl hover:bg-slate-100 active:bg-slate-200
+           transition-colors min-w-[48px] min-h-[48px]
+           flex items-center justify-center;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-slate-100;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-slate-300 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-slate-400;
+}
+
+/* PWA styles */
+@media (display-mode: standalone) {
+  body {
+    padding-top: env(safe-area-inset-top);
+  }
+}
+
+/* Prevent pull-to-refresh on mobile */
+html, body {
+  overscroll-behavior-y: contain;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Better tap highlighting */
+* {
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+}
+
+/* Input zoom prevention on iOS */
+@media screen and (max-width: 768px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Safe area utilities */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.pt-safe {
+  padding-top: env(safe-area-inset-top);
+}
+
+/* Gradient backgrounds for cards */
+.bg-gradient-sfbb {
+  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+}
