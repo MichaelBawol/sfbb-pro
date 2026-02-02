@@ -14,6 +14,7 @@ import {
   ShieldIcon,
   CheckIcon,
   ClipboardListIcon,
+  LogOutIcon,
 } from 'lucide-react'
 import { Appliance, Employee, EmployeePrivilege, ROLE_PRIVILEGES, PRIVILEGE_LABELS } from '../types'
 import PinEntry from './PinEntry'
@@ -36,6 +37,7 @@ export default function Settings() {
     setPin,
     hasPin,
     user,
+    logout,
   } = useAppContext()
 
   const [activeSection, setActiveSection] = useState<'business' | 'appliances' | 'employees' | 'checklists' | 'security'>('business')
@@ -773,6 +775,32 @@ export default function Settings() {
               </div>
             </div>
           )}
+
+          {/* Logout */}
+          <div className="card p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-slate-100 rounded-lg">
+                <LogOutIcon className="w-5 h-5 text-slate-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-slate-900">Sign Out</h3>
+                <p className="text-sm text-slate-500">
+                  Sign out of your account to switch users or secure this device
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                if (confirm('Are you sure you want to sign out?')) {
+                  logout()
+                }
+              }}
+              className="w-full py-3 px-4 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 font-medium rounded-xl flex items-center justify-center gap-2 transition-colors"
+            >
+              <LogOutIcon className="w-5 h-5" />
+              Sign Out
+            </button>
+          </div>
 
           {/* Danger Zone */}
           <div className="card p-6 border-red-200">
