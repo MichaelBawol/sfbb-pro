@@ -14,6 +14,7 @@ import Login from './components/Login'
 import WasteManagement from './components/WasteManagement'
 import Maintenance from './components/Maintenance'
 import Resources from './components/Resources'
+import DiaryAndReview from './components/DiaryAndReview'
 
 function App() {
   const { isAuthenticated, isLoading } = useAppContext()
@@ -47,6 +48,7 @@ function App() {
         <Route path="/waste" element={<WasteManagement />} />
         <Route path="/maintenance" element={<Maintenance />} />
         <Route path="/resources" element={<Resources />} />
+        <Route path="/diary" element={<DiaryAndReview />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

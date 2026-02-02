@@ -16,6 +16,9 @@ import {
   Alert,
   Appliance,
   ChecklistTemplates,
+  DiaryEntry,
+  WeeklyExtraCheck,
+  FourWeeklyReview,
 } from '../types'
 
 interface AppState {
@@ -41,6 +44,9 @@ interface AppState {
   alerts: Alert[]
   appliances: Appliance[]
   checklistTemplates: ChecklistTemplates
+  diaryEntries: DiaryEntry[]
+  weeklyExtraChecks: WeeklyExtraCheck[]
+  fourWeeklyReviews: FourWeeklyReview[]
 
   // UI State
   activeTab: string
@@ -117,6 +123,20 @@ interface AppContextType extends AppState {
   reorderChecklistItem: (type: keyof ChecklistTemplates, fromIndex: number, toIndex: number) => Promise<void>
   updateChecklistItem: (type: keyof ChecklistTemplates, index: number, newText: string) => Promise<void>
 
+  // Diary actions
+  addDiaryEntry: (entry: Omit<DiaryEntry, 'id'>) => Promise<void>
+  updateDiaryEntry: (id: string, data: Partial<DiaryEntry>) => Promise<void>
+  getDiaryEntryByDate: (date: string) => DiaryEntry | undefined
+
+  // Weekly extra checks actions
+  addWeeklyExtraCheck: (check: Omit<WeeklyExtraCheck, 'id'>) => Promise<void>
+  updateWeeklyExtraCheck: (id: string, data: Partial<WeeklyExtraCheck>) => Promise<void>
+  getWeeklyExtraCheckByWeek: (weekCommencing: string) => WeeklyExtraCheck | undefined
+
+  // 4-Weekly review actions
+  addFourWeeklyReview: (review: Omit<FourWeeklyReview, 'id'>) => Promise<void>
+  updateFourWeeklyReview: (id: string, data: Partial<FourWeeklyReview>) => Promise<void>
+
   // UI actions
   setActiveTab: (tab: string) => void
   toggleSidebar: () => void
@@ -154,6 +174,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     alerts: [],
     appliances: [],
     checklistTemplates: DEFAULT_TEMPLATES,
+    diaryEntries: [],
+    weeklyExtraChecks: [],
+    fourWeeklyReviews: [],
     activeTab: 'dashboard',
     sidebarOpen: false,
     settingsUnlocked: false,
@@ -213,6 +236,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         { data: spotChecks },
         { data: alerts },
         { data: templates },
+        { data: diaryEntries },
+        { data: weeklyExtraChecks },
+        { data: fourWeeklyReviews },
       ] = await Promise.all([
         supabase.from('employees').select('*, certificates(*), training_records(*)').eq('user_id', userId),
         supabase.from('appliances').select('*').eq('user_id', userId),
@@ -226,6 +252,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         supabase.from('spot_checks').select('*').eq('user_id', userId).order('date', { ascending: false }),
         supabase.from('alerts').select('*').eq('user_id', userId).order('date', { ascending: false }),
         supabase.from('checklist_templates').select('*').eq('user_id', userId).maybeSingle(),
+        supabase.from('diary_entries').select('*').eq('user_id', userId).order('date', { ascending: false }),
+        supabase.from('weekly_extra_checks').select('*').eq('user_id', userId).order('week_commencing', { ascending: false }),
+        supabase.from('four_weekly_reviews').select('*').eq('user_id', userId).order('review_date', { ascending: false }),
       ])
 
       // Transform data from snake_case to camelCase
@@ -385,6 +414,49 @@ export function AppProvider({ children }: { children: ReactNode }) {
         monthlyCleaning: templates.monthly_cleaning || [],
       } : DEFAULT_TEMPLATES
 
+      const transformedDiaryEntries = (diaryEntries || []).map((d: any) => ({
+        id: d.id,
+        date: d.date,
+        dayOfWeek: d.day_of_week,
+        problemsChanges: d.problems_changes,
+        openingChecksDone: d.opening_checks_done,
+        closingChecksDone: d.closing_checks_done,
+        staffName: d.staff_name,
+        signedOff: d.signed_off,
+      }))
+
+      const transformedWeeklyExtraChecks = (weeklyExtraChecks || []).map((w: any) => ({
+        id: w.id,
+        weekCommencing: w.week_commencing,
+        extraChecksNotes: w.extra_checks_notes,
+        staffName: w.staff_name,
+        signedOff: w.signed_off,
+      }))
+
+      const transformedFourWeeklyReviews = (fourWeeklyReviews || []).map((r: any) => ({
+        id: r.id,
+        reviewDate: r.review_date,
+        weekCommencing: r.week_commencing,
+        problemsObserved: r.problems_observed,
+        problemDetails: r.problem_details,
+        problemActions: r.problem_actions,
+        reviewedSafeMethods: r.reviewed_safe_methods,
+        allergenInfoUpdated: r.allergen_info_updated,
+        equipmentProcessesChanged: r.equipment_processes_changed,
+        newSuppliersRecorded: r.new_suppliers_recorded,
+        cleaningScheduleUpdated: r.cleaning_schedule_updated,
+        newStaffTrained: r.new_staff_trained,
+        existingStaffRefresher: r.existing_staff_refresher,
+        extraChecksRequired: r.extra_checks_required,
+        foodComplaintsInvestigated: r.food_complaints_investigated,
+        probesCalibrated: r.probes_calibrated,
+        extraChecksCompleted: r.extra_checks_completed,
+        proveItChecksCompleted: r.prove_it_checks_completed,
+        additionalDetails: r.additional_details,
+        managerName: r.manager_name,
+        signedOff: r.signed_off,
+      }))
+
       console.log('Setting state with profile:', profile?.email)
 
       setState(prev => ({
@@ -411,6 +483,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         spotChecks: transformedSpotChecks,
         alerts: transformedAlerts,
         checklistTemplates: transformedTemplates,
+        diaryEntries: transformedDiaryEntries,
+        weeklyExtraChecks: transformedWeeklyExtraChecks,
+        fourWeeklyReviews: transformedFourWeeklyReviews,
         isLoading: false,
       }))
     } catch (error) {
@@ -464,6 +539,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
           alerts: [],
           appliances: [],
           checklistTemplates: DEFAULT_TEMPLATES,
+          diaryEntries: [],
+          weeklyExtraChecks: [],
+          fourWeeklyReviews: [],
           settingsUnlocked: false,
         }))
       }
@@ -1179,6 +1257,167 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }))
   }
 
+  // Diary entry actions
+  const addDiaryEntry = async (entry: Omit<DiaryEntry, 'id'>) => {
+    if (!state.supabaseUser) return
+    const { data } = await supabase
+      .from('diary_entries')
+      .insert({
+        user_id: state.supabaseUser.id,
+        date: entry.date,
+        day_of_week: entry.dayOfWeek,
+        problems_changes: entry.problemsChanges,
+        opening_checks_done: entry.openingChecksDone,
+        closing_checks_done: entry.closingChecksDone,
+        staff_name: entry.staffName,
+        signed_off: entry.signedOff,
+      })
+      .select()
+      .single()
+
+    if (data) {
+      setState(prev => ({
+        ...prev,
+        diaryEntries: [{ ...entry, id: data.id }, ...prev.diaryEntries],
+      }))
+    }
+  }
+
+  const updateDiaryEntry = async (id: string, data: Partial<DiaryEntry>) => {
+    await supabase
+      .from('diary_entries')
+      .update({
+        problems_changes: data.problemsChanges,
+        opening_checks_done: data.openingChecksDone,
+        closing_checks_done: data.closingChecksDone,
+        staff_name: data.staffName,
+        signed_off: data.signedOff,
+      })
+      .eq('id', id)
+
+    setState(prev => ({
+      ...prev,
+      diaryEntries: prev.diaryEntries.map(d => d.id === id ? { ...d, ...data } : d),
+    }))
+  }
+
+  const getDiaryEntryByDate = (date: string): DiaryEntry | undefined => {
+    return state.diaryEntries.find(d => d.date === date)
+  }
+
+  // Weekly extra checks actions
+  const addWeeklyExtraCheck = async (check: Omit<WeeklyExtraCheck, 'id'>) => {
+    if (!state.supabaseUser) return
+    const { data } = await supabase
+      .from('weekly_extra_checks')
+      .insert({
+        user_id: state.supabaseUser.id,
+        week_commencing: check.weekCommencing,
+        extra_checks_notes: check.extraChecksNotes,
+        staff_name: check.staffName,
+        signed_off: check.signedOff,
+      })
+      .select()
+      .single()
+
+    if (data) {
+      setState(prev => ({
+        ...prev,
+        weeklyExtraChecks: [{ ...check, id: data.id }, ...prev.weeklyExtraChecks],
+      }))
+    }
+  }
+
+  const updateWeeklyExtraCheck = async (id: string, data: Partial<WeeklyExtraCheck>) => {
+    await supabase
+      .from('weekly_extra_checks')
+      .update({
+        extra_checks_notes: data.extraChecksNotes,
+        staff_name: data.staffName,
+        signed_off: data.signedOff,
+      })
+      .eq('id', id)
+
+    setState(prev => ({
+      ...prev,
+      weeklyExtraChecks: prev.weeklyExtraChecks.map(w => w.id === id ? { ...w, ...data } : w),
+    }))
+  }
+
+  const getWeeklyExtraCheckByWeek = (weekCommencing: string): WeeklyExtraCheck | undefined => {
+    return state.weeklyExtraChecks.find(w => w.weekCommencing === weekCommencing)
+  }
+
+  // 4-Weekly review actions
+  const addFourWeeklyReview = async (review: Omit<FourWeeklyReview, 'id'>) => {
+    if (!state.supabaseUser) return
+    const { data } = await supabase
+      .from('four_weekly_reviews')
+      .insert({
+        user_id: state.supabaseUser.id,
+        review_date: review.reviewDate,
+        week_commencing: review.weekCommencing,
+        problems_observed: review.problemsObserved,
+        problem_details: review.problemDetails,
+        problem_actions: review.problemActions,
+        reviewed_safe_methods: review.reviewedSafeMethods,
+        allergen_info_updated: review.allergenInfoUpdated,
+        equipment_processes_changed: review.equipmentProcessesChanged,
+        new_suppliers_recorded: review.newSuppliersRecorded,
+        cleaning_schedule_updated: review.cleaningScheduleUpdated,
+        new_staff_trained: review.newStaffTrained,
+        existing_staff_refresher: review.existingStaffRefresher,
+        extra_checks_required: review.extraChecksRequired,
+        food_complaints_investigated: review.foodComplaintsInvestigated,
+        probes_calibrated: review.probesCalibrated,
+        extra_checks_completed: review.extraChecksCompleted,
+        prove_it_checks_completed: review.proveItChecksCompleted,
+        additional_details: review.additionalDetails,
+        manager_name: review.managerName,
+        signed_off: review.signedOff,
+      })
+      .select()
+      .single()
+
+    if (data) {
+      setState(prev => ({
+        ...prev,
+        fourWeeklyReviews: [{ ...review, id: data.id }, ...prev.fourWeeklyReviews],
+      }))
+    }
+  }
+
+  const updateFourWeeklyReview = async (id: string, data: Partial<FourWeeklyReview>) => {
+    await supabase
+      .from('four_weekly_reviews')
+      .update({
+        problems_observed: data.problemsObserved,
+        problem_details: data.problemDetails,
+        problem_actions: data.problemActions,
+        reviewed_safe_methods: data.reviewedSafeMethods,
+        allergen_info_updated: data.allergenInfoUpdated,
+        equipment_processes_changed: data.equipmentProcessesChanged,
+        new_suppliers_recorded: data.newSuppliersRecorded,
+        cleaning_schedule_updated: data.cleaningScheduleUpdated,
+        new_staff_trained: data.newStaffTrained,
+        existing_staff_refresher: data.existingStaffRefresher,
+        extra_checks_required: data.extraChecksRequired,
+        food_complaints_investigated: data.foodComplaintsInvestigated,
+        probes_calibrated: data.probesCalibrated,
+        extra_checks_completed: data.extraChecksCompleted,
+        prove_it_checks_completed: data.proveItChecksCompleted,
+        additional_details: data.additionalDetails,
+        manager_name: data.managerName,
+        signed_off: data.signedOff,
+      })
+      .eq('id', id)
+
+    setState(prev => ({
+      ...prev,
+      fourWeeklyReviews: prev.fourWeeklyReviews.map(r => r.id === id ? { ...r, ...data } : r),
+    }))
+  }
+
   // UI actions
   const setActiveTab = (tab: string) => {
     setState(prev => ({ ...prev, activeTab: tab }))
@@ -1234,6 +1473,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     removeChecklistItem,
     reorderChecklistItem,
     updateChecklistItem,
+    addDiaryEntry,
+    updateDiaryEntry,
+    getDiaryEntryByDate,
+    addWeeklyExtraCheck,
+    updateWeeklyExtraCheck,
+    getWeeklyExtraCheckByWeek,
+    addFourWeeklyReview,
+    updateFourWeeklyReview,
     setActiveTab,
     toggleSidebar,
     refreshData,

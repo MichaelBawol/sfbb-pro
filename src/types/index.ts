@@ -215,6 +215,54 @@ export interface MaintenanceLog {
   nextServiceDate?: string
 }
 
+// SFBB Diary & 4-Weekly Review types
+export interface DiaryEntry {
+  id: string
+  date: string
+  dayOfWeek: string
+  problemsChanges?: string
+  openingChecksDone: boolean
+  closingChecksDone: boolean
+  staffName?: string
+  signedOff: boolean
+}
+
+export interface WeeklyExtraCheck {
+  id: string
+  weekCommencing: string
+  extraChecksNotes?: string
+  staffName?: string
+  signedOff: boolean
+}
+
+export interface FourWeeklyReview {
+  id: string
+  reviewDate: string
+  weekCommencing: string
+  // Problems observed
+  problemsObserved?: boolean
+  problemDetails?: string
+  problemActions?: string
+  // Safe Method Checklist (12 questions)
+  reviewedSafeMethods?: boolean
+  allergenInfoUpdated?: boolean
+  equipmentProcessesChanged?: boolean
+  newSuppliersRecorded?: boolean
+  cleaningScheduleUpdated?: boolean
+  newStaffTrained?: boolean
+  existingStaffRefresher?: boolean
+  extraChecksRequired?: boolean
+  foodComplaintsInvestigated?: boolean
+  probesCalibrated?: boolean
+  extraChecksCompleted?: boolean
+  proveItChecksCompleted?: boolean
+  // Additional details
+  additionalDetails?: string
+  // Sign off
+  managerName?: string
+  signedOff: boolean
+}
+
 export interface SpotCheck {
   id: string
   date: string
