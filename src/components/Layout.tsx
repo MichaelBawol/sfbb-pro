@@ -56,37 +56,40 @@ export default function Layout({ children }: LayoutProps) {
   return (
     <div className="min-h-screen bg-slate-100 pb-20">
       {/* Top Header Bar */}
-      <header className="sticky top-0 z-40 bg-white shadow-sm">
-        <div className="flex items-center justify-between h-14 px-4">
-          {/* Logo/Title */}
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-sfbb-500 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">SF</span>
-            </div>
-            <div>
-              <span className="font-bold text-slate-900 text-sm">SFBB Pro</span>
-              {business && (
-                <p className="text-xs text-slate-500 truncate max-w-[150px]">{business.name}</p>
-              )}
+      <header className="sticky top-0 z-40 bg-gradient-to-r from-sfbb-600 via-sfbb-500 to-sfbb-600 shadow-lg animate-gradient">
+        <div className="flex items-center justify-between h-20 px-4">
+          {/* Logo */}
+          <div className="flex items-center">
+            <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center animate-pulse-slow shadow-lg border border-white/30">
+              <span className="text-white font-black text-lg tracking-tight">SF</span>
             </div>
           </div>
 
-          {/* Right side actions */}
-          <div className="flex items-center gap-1">
-            {/* Food Hygiene Rating Badge */}
+          {/* Center - Business Name */}
+          <div className="flex-1 text-center px-4">
+            {business?.name ? (
+              <h1 className="text-white font-bold text-lg truncate animate-fade-in">
+                {business.name}
+              </h1>
+            ) : (
+              <h1 className="text-white font-bold text-lg">SFBB Pro</h1>
+            )}
             {business?.foodHygieneRating !== undefined && (
-              <div className="flex items-center gap-1 px-2 py-1 bg-emerald-100 rounded-full mr-1">
-                <span className="text-emerald-700 text-xs font-bold">
-                  {business.foodHygieneRating}/5
+              <div className="inline-flex items-center gap-1 mt-1 px-2.5 py-0.5 bg-white/20 backdrop-blur-sm rounded-full">
+                <span className="text-white/90 text-xs font-semibold">
+                  Rating: {business.foodHygieneRating}/5
                 </span>
               </div>
             )}
+          </div>
 
+          {/* Right side actions */}
+          <div className="flex items-center">
             {/* Notifications */}
-            <button className="relative p-2.5 rounded-full hover:bg-slate-100 active:bg-slate-200">
-              <BellIcon className="w-5 h-5 text-slate-600" />
+            <button className="relative p-3 rounded-2xl bg-white/10 hover:bg-white/20 active:bg-white/30 transition-all duration-200">
+              <BellIcon className="w-6 h-6 text-white" />
               {unacknowledgedAlerts > 0 && (
-                <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center font-bold">
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center font-bold animate-bounce shadow-lg">
                   {unacknowledgedAlerts}
                 </span>
               )}
@@ -202,6 +205,44 @@ export default function Layout({ children }: LayoutProps) {
         }
         .safe-area-bottom {
           padding-bottom: env(safe-area-inset-bottom);
+        }
+        @keyframes gradient {
+          0%, 100% {
+            background-position: 0% 50%;
+          }
+          50% {
+            background-position: 100% 50%;
+          }
+        }
+        .animate-gradient {
+          background-size: 200% 200%;
+          animation: gradient 8s ease infinite;
+        }
+        @keyframes pulse-slow {
+          0%, 100% {
+            opacity: 1;
+            transform: scale(1);
+          }
+          50% {
+            opacity: 0.9;
+            transform: scale(1.05);
+          }
+        }
+        .animate-pulse-slow {
+          animation: pulse-slow 3s ease-in-out infinite;
+        }
+        @keyframes fade-in {
+          from {
+            opacity: 0;
+            transform: translateY(-5px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .animate-fade-in {
+          animation: fade-in 0.5s ease-out;
         }
       `}</style>
     </div>
