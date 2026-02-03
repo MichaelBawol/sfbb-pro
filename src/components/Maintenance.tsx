@@ -7,6 +7,7 @@ import {
   CheckCircleIcon,
   AlertTriangleIcon,
   ClockIcon,
+  ThermometerIcon,
 } from 'lucide-react'
 import BottomSheet from './BottomSheet'
 
@@ -17,8 +18,14 @@ const MAINTENANCE_TYPES = [
 ] as const
 
 export default function Maintenance() {
-  const { maintenanceLogs, addMaintenanceLog, appliances } = useAppContext()
+  const { maintenanceLogs, addMaintenanceLog, appliances, temperatureLogs, addTemperatureLog } = useAppContext()
   const [showForm, setShowForm] = useState(false)
+  const [showCalibrationForm, setShowCalibrationForm] = useState(false)
+  const [calibrationData, setCalibrationData] = useState({
+    iceTemp: '',
+    boilingTemp: '',
+    performedBy: '',
+  })
   const [formData, setFormData] = useState({
     applianceId: '',
     applianceName: '',
@@ -30,6 +37,17 @@ export default function Maintenance() {
   })
 
   const today = new Date().toISOString().split('T')[0]
+  const now = new Date().toTimeString().slice(0, 5)
+
+  // Get probe calibration records
+  const calibrationLogs = temperatureLogs
+    .filter(log => log.type === 'probe_calibration')
+    .sort((a, b) => b.date.localeCompare(a.date))
+
+  const lastCalibration = calibrationLogs[0]
+  const daysSinceCalibration = lastCalibration
+    ? Math.floor((new Date().getTime() - new Date(lastCalibration.date).getTime()) / (1000 * 60 * 60 * 24))
+    : null
 
   // Find upcoming services (within next 30 days)
   const upcomingServices = maintenanceLogs
@@ -51,6 +69,41 @@ export default function Maintenance() {
       nextServiceDate: '',
     })
     setShowForm(false)
+  }
+
+  const resetCalibrationForm = () => {
+    setCalibrationData({
+      iceTemp: '',
+      boilingTemp: '',
+      performedBy: '',
+    })
+    setShowCalibrationForm(false)
+  }
+
+  const handleCalibrationSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!calibrationData.iceTemp || !calibrationData.boilingTemp || !calibrationData.performedBy) return
+
+    const iceTemp = parseFloat(calibrationData.iceTemp)
+    const boilingTemp = parseFloat(calibrationData.boilingTemp)
+
+    // Check if calibration is within acceptable range
+    const iceOk = iceTemp >= -1 && iceTemp <= 1
+    const boilingOk = boilingTemp >= 99 && boilingTemp <= 101
+    const isCompliant = iceOk && boilingOk
+
+    addTemperatureLog({
+      type: 'probe_calibration',
+      applianceName: 'Probe Thermometer',
+      iceTemp,
+      boilingTemp,
+      time: now,
+      date: today,
+      loggedBy: calibrationData.performedBy,
+      isCompliant,
+    })
+
+    resetCalibrationForm()
   }
 
   const handleApplianceSelect = (applianceId: string) => {
@@ -135,6 +188,95 @@ export default function Maintenance() {
         <PlusIcon className="w-5 h-5" />
         Log Maintenance
       </button>
+
+      {/* Probe Calibration Section */}
+      <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+        <div className="p-4 border-b border-slate-100 flex items-center gap-2">
+          <ThermometerIcon className="w-5 h-5 text-violet-500" />
+          <h2 className="font-semibold text-slate-900">Probe Calibration</h2>
+        </div>
+        <div className="p-4 space-y-4">
+          {/* Status */}
+          <div className={`p-4 rounded-xl ${
+            daysSinceCalibration === null ? 'bg-slate-50' :
+            daysSinceCalibration <= 7 ? 'bg-emerald-50' :
+            daysSinceCalibration <= 14 ? 'bg-amber-50' : 'bg-red-50'
+          }`}>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium text-slate-900">
+                  {daysSinceCalibration === null ? 'No calibration recorded' :
+                   daysSinceCalibration === 0 ? 'Calibrated today' :
+                   daysSinceCalibration === 1 ? 'Calibrated yesterday' :
+                   `Calibrated ${daysSinceCalibration} days ago`}
+                </p>
+                {lastCalibration && (
+                  <p className="text-sm text-slate-500 mt-1">
+                    Ice: {lastCalibration.iceTemp}°C • Boiling: {lastCalibration.boilingTemp}°C
+                  </p>
+                )}
+              </div>
+              {daysSinceCalibration !== null && (
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                  daysSinceCalibration <= 7 ? 'bg-emerald-100' :
+                  daysSinceCalibration <= 14 ? 'bg-amber-100' : 'bg-red-100'
+                }`}>
+                  {daysSinceCalibration <= 7 ? (
+                    <CheckCircleIcon className="w-5 h-5 text-emerald-600" />
+                  ) : (
+                    <AlertTriangleIcon className={`w-5 h-5 ${
+                      daysSinceCalibration <= 14 ? 'text-amber-600' : 'text-red-600'
+                    }`} />
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Calibrate Button */}
+          <button
+            onClick={() => setShowCalibrationForm(true)}
+            className="w-full py-3 bg-violet-100 text-violet-700 rounded-xl font-semibold active:bg-violet-200 flex items-center justify-center gap-2"
+          >
+            <ThermometerIcon className="w-5 h-5" />
+            Calibrate Probe
+          </button>
+
+          {/* Recent Calibrations */}
+          {calibrationLogs.length > 0 && (
+            <div>
+              <p className="text-sm font-medium text-slate-500 mb-2">Recent Calibrations</p>
+              <div className="space-y-2">
+                {calibrationLogs.slice(0, 3).map(log => (
+                  <div key={log.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
+                    <div>
+                      <p className="text-sm font-medium text-slate-900">
+                        {new Date(log.date).toLocaleDateString('en-GB', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                        })}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        Ice: {log.iceTemp}°C • Boiling: {log.boilingTemp}°C • {log.loggedBy}
+                      </p>
+                    </div>
+                    {log.isCompliant ? (
+                      <CheckCircleIcon className="w-5 h-5 text-emerald-500" />
+                    ) : (
+                      <AlertTriangleIcon className="w-5 h-5 text-amber-500" />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <p className="text-xs text-slate-500">
+            Calibrate weekly using ice water (0°C) and boiling water (100°C)
+          </p>
+        </div>
+      </div>
 
       {/* Upcoming Services */}
       {upcomingServices.length > 0 && (
@@ -353,6 +495,81 @@ export default function Maintenance() {
               className="flex-1 py-4 bg-sfbb-600 rounded-xl font-semibold text-white active:bg-sfbb-700 disabled:opacity-50"
             >
               Save Record
+            </button>
+          </div>
+        </form>
+      </BottomSheet>
+
+      {/* Probe Calibration Form */}
+      <BottomSheet
+        isOpen={showCalibrationForm}
+        onClose={resetCalibrationForm}
+        title="Calibrate Probe Thermometer"
+      >
+        <form onSubmit={handleCalibrationSubmit} className="p-4 space-y-4">
+          <div className="bg-violet-50 p-4 rounded-xl">
+            <p className="text-sm text-violet-700">
+              Test your probe in ice water and boiling water to verify accuracy.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="label">Ice Water (°C) *</label>
+              <input
+                type="number"
+                step="0.1"
+                inputMode="decimal"
+                value={calibrationData.iceTemp}
+                onChange={e => setCalibrationData({ ...calibrationData, iceTemp: e.target.value })}
+                className="input text-center text-2xl font-bold"
+                placeholder="0"
+                required
+              />
+              <p className="text-xs text-slate-400 mt-1 text-center">Target: -1 to 1°C</p>
+            </div>
+            <div>
+              <label className="label">Boiling Water (°C) *</label>
+              <input
+                type="number"
+                step="0.1"
+                inputMode="decimal"
+                value={calibrationData.boilingTemp}
+                onChange={e => setCalibrationData({ ...calibrationData, boilingTemp: e.target.value })}
+                className="input text-center text-2xl font-bold"
+                placeholder="100"
+                required
+              />
+              <p className="text-xs text-slate-400 mt-1 text-center">Target: 99 to 101°C</p>
+            </div>
+          </div>
+
+          <div>
+            <label className="label">Performed By *</label>
+            <input
+              type="text"
+              value={calibrationData.performedBy}
+              onChange={e => setCalibrationData({ ...calibrationData, performedBy: e.target.value })}
+              className="input"
+              placeholder="Your name"
+              required
+            />
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <button
+              type="button"
+              onClick={resetCalibrationForm}
+              className="flex-1 py-4 bg-slate-100 rounded-xl font-semibold text-slate-700 active:bg-slate-200"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={!calibrationData.iceTemp || !calibrationData.boilingTemp || !calibrationData.performedBy}
+              className="flex-1 py-4 bg-violet-600 rounded-xl font-semibold text-white active:bg-violet-700 disabled:opacity-50"
+            >
+              Save Calibration
             </button>
           </div>
         </form>
