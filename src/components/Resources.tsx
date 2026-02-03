@@ -9,6 +9,7 @@ import {
   ClipboardListIcon,
   ThermometerIcon,
   BugIcon,
+  SquareIcon,
 } from 'lucide-react'
 
 const QUICK_LINKS = [
@@ -92,6 +93,15 @@ const TEMPERATURE_GUIDELINES = [
   { item: 'Chilled delivery', temp: '0°C to 8°C', color: 'cyan' },
 ]
 
+const CHOPPING_BOARD_COLORS = [
+  { color: 'Red', use: 'Raw meat', bgColor: 'bg-red-500', textColor: 'text-red-700', bgLight: 'bg-red-50' },
+  { color: 'Blue', use: 'Raw fish', bgColor: 'bg-blue-500', textColor: 'text-blue-700', bgLight: 'bg-blue-50' },
+  { color: 'Yellow', use: 'Cooked meat', bgColor: 'bg-yellow-400', textColor: 'text-yellow-700', bgLight: 'bg-yellow-50' },
+  { color: 'Green', use: 'Salad & fruit', bgColor: 'bg-green-500', textColor: 'text-green-700', bgLight: 'bg-green-50' },
+  { color: 'Brown', use: 'Vegetables', bgColor: 'bg-amber-700', textColor: 'text-amber-800', bgLight: 'bg-amber-50' },
+  { color: 'White', use: 'Bakery & dairy', bgColor: 'bg-slate-200', textColor: 'text-slate-700', bgLight: 'bg-slate-50' },
+]
+
 const CLEANING_CHEMICALS = [
   { name: 'Sanitiser', use: 'Food contact surfaces', dilution: 'Follow manufacturer' },
   { name: 'Degreaser', use: 'Ovens, grills, fryers', dilution: 'Follow manufacturer' },
@@ -153,6 +163,33 @@ export default function Resources() {
               >
                 <p className="font-medium text-slate-900 text-sm">{item.item}</p>
                 <p className={`text-lg font-bold text-${item.color}-600`}>{item.temp}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Chopping Board Colour Codes */}
+      <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+        <div className="p-4 border-b border-slate-100 flex items-center gap-2">
+          <SquareIcon className="w-5 h-5 text-emerald-500" />
+          <h2 className="font-semibold text-slate-900">Chopping Board Colour Codes</h2>
+        </div>
+        <div className="p-4">
+          <p className="text-sm text-slate-500 mb-3">
+            Use colour-coded boards to prevent cross-contamination
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            {CHOPPING_BOARD_COLORS.map((board, index) => (
+              <div
+                key={index}
+                className={`p-3 rounded-xl ${board.bgLight} border border-slate-100 flex items-center gap-3`}
+              >
+                <div className={`w-8 h-8 rounded-lg ${board.bgColor} flex-shrink-0 shadow-sm`} />
+                <div>
+                  <p className={`font-semibold text-sm ${board.textColor}`}>{board.color}</p>
+                  <p className="text-xs text-slate-600">{board.use}</p>
+                </div>
               </div>
             ))}
           </div>
