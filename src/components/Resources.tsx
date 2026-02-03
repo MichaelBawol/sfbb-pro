@@ -100,6 +100,7 @@ const CHOPPING_BOARD_COLORS = [
   { color: 'Green', use: 'Salad & fruit', bgColor: 'bg-green-500', textColor: 'text-green-700', bgLight: 'bg-green-50' },
   { color: 'Brown', use: 'Vegetables', bgColor: 'bg-amber-700', textColor: 'text-amber-800', bgLight: 'bg-amber-50' },
   { color: 'White', use: 'Bakery & dairy', bgColor: 'bg-slate-200', textColor: 'text-slate-700', bgLight: 'bg-slate-50' },
+  { color: 'Purple', use: 'Allergen-free', bgColor: 'bg-purple-500', textColor: 'text-purple-700', bgLight: 'bg-purple-50' },
 ]
 
 const CLEANING_CHEMICALS = [
