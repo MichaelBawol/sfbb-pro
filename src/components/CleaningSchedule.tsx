@@ -6,6 +6,7 @@ import {
   PlusIcon,
 } from 'lucide-react'
 import { ChecklistTemplates } from '../types'
+import { useLastStaff } from './StaffSelector'
 
 type Frequency = 'daily' | 'weekly' | 'monthly'
 
@@ -17,6 +18,7 @@ const frequencyConfig: Record<Frequency, { label: string; color: string; templat
 
 export default function CleaningSchedule() {
   const { cleaningRecords, addCleaningRecord, updateCleaningRecord, checklistTemplates } = useAppContext()
+  const { getLastStaff } = useLastStaff()
   const [activeFrequency, setActiveFrequency] = useState<Frequency>('daily')
 
   const today = new Date().toISOString().split('T')[0]
@@ -53,7 +55,7 @@ export default function CleaningSchedule() {
             ...task,
             completed: !task.completed,
             completedAt: !task.completed ? new Date().toISOString() : undefined,
-            completedBy: !task.completed ? 'Current User' : undefined,
+            completedBy: !task.completed ? getLastStaff() : undefined,
           }
         : task
     )
@@ -72,7 +74,7 @@ export default function CleaningSchedule() {
 
     updateCleaningRecord(currentRecord.id, {
       signedOff: true,
-      completedBy: 'Current User',
+      completedBy: getLastStaff(),
     })
   }
 

@@ -6,9 +6,11 @@ import {
   SunIcon,
   MoonIcon,
 } from 'lucide-react'
+import { useLastStaff } from './StaffSelector'
 
 export default function DailyChecks() {
   const { checklists, addChecklist, updateChecklist, signOffChecklist, checklistTemplates } = useAppContext()
+  const { getLastStaff } = useLastStaff()
   const [activeTab, setActiveTab] = useState<'opening' | 'closing'>('opening')
 
   const today = new Date().toISOString().split('T')[0]
@@ -46,7 +48,7 @@ export default function DailyChecks() {
             ...item,
             completed: !item.completed,
             completedAt: !item.completed ? new Date().toISOString() : undefined,
-            completedBy: !item.completed ? 'Current User' : undefined,
+            completedBy: !item.completed ? getLastStaff() : undefined,
           }
         : item
     )
@@ -63,7 +65,7 @@ export default function DailyChecks() {
       return
     }
 
-    signOffChecklist(currentChecklist.id, 'Current User')
+    signOffChecklist(currentChecklist.id, getLastStaff())
   }
 
   const completedCount = currentChecklist?.items.filter(i => i.completed).length || 0

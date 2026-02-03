@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAppContext } from '../hooks/useAppContext'
 import {
   ThermometerIcon,
@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { TemperatureLog, TEMP_THRESHOLDS } from '../types'
 import BottomSheet from './BottomSheet'
+import StaffSelector, { useLastStaff } from './StaffSelector'
 
 type TempType = TemperatureLog['type']
 
@@ -31,6 +32,7 @@ const tempTypeColors: Record<TempType, string> = {
 
 export default function TemperatureMonitoring() {
   const { temperatureLogs, appliances, addTemperatureLog } = useAppContext()
+  const { getLastStaff } = useLastStaff()
   const [showForm, setShowForm] = useState(false)
   const [formData, setFormData] = useState({
     type: 'fridge' as TempType,
@@ -39,7 +41,15 @@ export default function TemperatureMonitoring() {
     boilingTemp: '',
     iceTemp: '',
     notes: '',
+    loggedBy: '',
   })
+
+  // Set default staff when form opens
+  useEffect(() => {
+    if (showForm && !formData.loggedBy) {
+      setFormData(prev => ({ ...prev, loggedBy: getLastStaff() }))
+    }
+  }, [showForm])
 
   const today = new Date().toISOString().split('T')[0]
   const now = new Date().toTimeString().slice(0, 5)
@@ -77,7 +87,7 @@ export default function TemperatureMonitoring() {
       iceTemp: formData.type === 'probe_calibration' ? parseFloat(formData.iceTemp) : undefined,
       time: now,
       date: today,
-      loggedBy: 'Current User',
+      loggedBy: formData.loggedBy,
       notes: formData.notes || undefined,
       isCompliant: formData.type === 'probe_calibration'
         ? true
@@ -93,6 +103,7 @@ export default function TemperatureMonitoring() {
       boilingTemp: '',
       iceTemp: '',
       notes: '',
+      loggedBy: '',
     })
   }
 
@@ -322,6 +333,14 @@ export default function TemperatureMonitoring() {
               placeholder="Any additional notes..."
             />
           </div>
+
+          {/* Logged By */}
+          <StaffSelector
+            value={formData.loggedBy}
+            onChange={val => setFormData({ ...formData, loggedBy: val })}
+            label="Logged By"
+            required
+          />
 
           {/* Submit Button */}
           <button

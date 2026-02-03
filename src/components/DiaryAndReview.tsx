@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useAppContext } from '../hooks/useAppContext'
 import { FourWeeklyReview } from '../types'
 import BottomSheet from './BottomSheet'
+import StaffSelector, { useLastStaff } from './StaffSelector'
 import {
   CalendarIcon,
   CheckCircleIcon,
@@ -74,6 +75,7 @@ export default function DiaryAndReview() {
     addFourWeeklyReview,
     updateFourWeeklyReview,
   } = useAppContext()
+  const { getLastStaff } = useLastStaff()
 
   const [currentWeek, setCurrentWeek] = useState(() => getWeekCommencing(new Date()))
   const [activeTab, setActiveTab] = useState<'diary' | 'review'>('diary')
@@ -163,7 +165,7 @@ export default function DiaryAndReview() {
         problemsChanges: '',
         openingChecksDone: false,
         closingChecksDone: false,
-        staffName: user?.name || '',
+        staffName: getLastStaff(),
         signedOff: false,
       })
     }
@@ -400,15 +402,16 @@ export default function DiaryAndReview() {
               className="w-full p-3 border border-slate-200 rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-sfbb-500"
               rows={3}
             />
-            <div className="mt-3 flex items-center justify-between">
-              <input
-                type="text"
-                value={extraChecksForm.staffName}
-                onChange={(e) => setExtraChecksForm(prev => ({ ...prev, staffName: e.target.value }))}
-                onBlur={saveExtraChecks}
-                placeholder="Name"
-                className="flex-1 p-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sfbb-500"
-              />
+            <div className="mt-3 flex items-center justify-between gap-3">
+              <div className="flex-1">
+                <StaffSelector
+                  value={extraChecksForm.staffName}
+                  onChange={val => {
+                    setExtraChecksForm(prev => ({ ...prev, staffName: val }))
+                  }}
+                  placeholder="Select name"
+                />
+              </div>
               <button
                 onClick={async () => {
                   const newVal = !extraChecksForm.signedOff
@@ -581,16 +584,12 @@ export default function DiaryAndReview() {
           </div>
 
           {/* Name */}
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Name</label>
-            <input
-              type="text"
-              value={dayForm.staffName}
-              onChange={(e) => setDayForm(prev => ({ ...prev, staffName: e.target.value }))}
-              placeholder="Enter your name"
-              className="w-full p-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sfbb-500"
-            />
-          </div>
+          <StaffSelector
+            value={dayForm.staffName}
+            onChange={val => setDayForm(prev => ({ ...prev, staffName: val }))}
+            label="Name"
+            required
+          />
 
           {/* Sign Off */}
           <button

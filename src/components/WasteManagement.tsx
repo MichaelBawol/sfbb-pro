@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAppContext } from '../hooks/useAppContext'
 import {
   TrashIcon,
@@ -6,6 +6,7 @@ import {
   ScaleIcon,
 } from 'lucide-react'
 import BottomSheet from './BottomSheet'
+import StaffSelector, { useLastStaff } from './StaffSelector'
 
 const WASTE_REASONS = [
   'Expired/Out of date',
@@ -23,13 +24,22 @@ const WASTE_REASONS = [
 
 export default function WasteManagement() {
   const { wasteLogs, addWasteLog } = useAppContext()
+  const { getLastStaff } = useLastStaff()
   const [showForm, setShowForm] = useState(false)
   const [formData, setFormData] = useState({
     itemName: '',
     quantity: '',
     reason: '',
     cost: '',
+    loggedBy: '',
   })
+
+  // Set default staff when form opens
+  useEffect(() => {
+    if (showForm && !formData.loggedBy) {
+      setFormData(prev => ({ ...prev, loggedBy: getLastStaff() }))
+    }
+  }, [showForm])
 
   const today = new Date().toISOString().split('T')[0]
   const todayLogs = wasteLogs.filter(w => w.date === today)
@@ -45,13 +55,13 @@ export default function WasteManagement() {
   const sortedDates = Object.keys(logsByDate).sort((a, b) => b.localeCompare(a))
 
   const resetForm = () => {
-    setFormData({ itemName: '', quantity: '', reason: '', cost: '' })
+    setFormData({ itemName: '', quantity: '', reason: '', cost: '', loggedBy: '' })
     setShowForm(false)
   }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!formData.itemName || !formData.quantity || !formData.reason) return
+    if (!formData.itemName || !formData.quantity || !formData.reason || !formData.loggedBy) return
 
     addWasteLog({
       date: today,
@@ -59,7 +69,7 @@ export default function WasteManagement() {
       itemName: formData.itemName,
       quantity: formData.quantity,
       reason: formData.reason,
-      loggedBy: 'Current User',
+      loggedBy: formData.loggedBy,
       cost: formData.cost ? parseFloat(formData.cost) : undefined,
     })
 
@@ -210,6 +220,13 @@ export default function WasteManagement() {
             </div>
           </div>
 
+          <StaffSelector
+            value={formData.loggedBy}
+            onChange={val => setFormData({ ...formData, loggedBy: val })}
+            label="Logged By"
+            required
+          />
+
           <div>
             <label className="label">Estimated Cost (£)</label>
             <input
@@ -228,7 +245,7 @@ export default function WasteManagement() {
             </button>
             <button
               type="submit"
-              disabled={!formData.itemName || !formData.quantity || !formData.reason}
+              disabled={!formData.itemName || !formData.quantity || !formData.reason || !formData.loggedBy}
               className="flex-1 py-4 bg-sfbb-600 rounded-xl font-semibold text-white active:bg-sfbb-700 disabled:opacity-50"
             >
               Log Waste

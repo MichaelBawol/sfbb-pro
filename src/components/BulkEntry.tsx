@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAppContext } from '../hooks/useAppContext'
 import {
   CalendarIcon,
@@ -8,11 +8,13 @@ import {
   Loader2Icon,
 } from 'lucide-react'
 import { TemperatureLog, TEMP_THRESHOLDS } from '../types'
+import StaffSelector, { useLastStaff } from './StaffSelector'
 
 type TempType = TemperatureLog['type']
 
 export default function BulkEntry() {
   const { appliances, addTemperatureLog, addChecklist, checklistTemplates } = useAppContext()
+  const { getLastStaff } = useLastStaff()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [success, setSuccess] = useState('')
   const [error, setError] = useState('')
@@ -21,6 +23,12 @@ export default function BulkEntry() {
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [staffName, setStaffName] = useState('')
+
+  // Set default staff on mount
+  useEffect(() => {
+    const lastStaff = getLastStaff()
+    if (lastStaff) setStaffName(lastStaff)
+  }, [])
 
   // Temperature settings
   const [includeFridge, setIncludeFridge] = useState(true)
@@ -252,16 +260,12 @@ export default function BulkEntry() {
                 />
               </div>
             </div>
-            <div>
-              <label className="label">Staff Name</label>
-              <input
-                type="text"
-                value={staffName}
-                onChange={e => setStaffName(e.target.value)}
-                placeholder="Enter name of person logging"
-                className="input"
-              />
-            </div>
+            <StaffSelector
+              value={staffName}
+              onChange={setStaffName}
+              label="Staff Name"
+              required
+            />
           </div>
         </div>
 

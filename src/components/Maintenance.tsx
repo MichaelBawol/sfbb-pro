@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAppContext } from '../hooks/useAppContext'
 import {
   WrenchIcon,
@@ -10,6 +10,7 @@ import {
   ThermometerIcon,
 } from 'lucide-react'
 import BottomSheet from './BottomSheet'
+import StaffSelector, { useLastStaff } from './StaffSelector'
 
 const MAINTENANCE_TYPES = [
   { value: 'repair', label: 'Repair', color: 'red' },
@@ -19,6 +20,7 @@ const MAINTENANCE_TYPES = [
 
 export default function Maintenance() {
   const { maintenanceLogs, addMaintenanceLog, appliances, temperatureLogs, addTemperatureLog } = useAppContext()
+  const { getLastStaff } = useLastStaff()
   const [showForm, setShowForm] = useState(false)
   const [showCalibrationForm, setShowCalibrationForm] = useState(false)
   const [calibrationData, setCalibrationData] = useState({
@@ -35,6 +37,19 @@ export default function Maintenance() {
     cost: '',
     nextServiceDate: '',
   })
+
+  // Set default staff when forms open
+  useEffect(() => {
+    if (showForm && !formData.performedBy) {
+      setFormData(prev => ({ ...prev, performedBy: getLastStaff() }))
+    }
+  }, [showForm])
+
+  useEffect(() => {
+    if (showCalibrationForm && !calibrationData.performedBy) {
+      setCalibrationData(prev => ({ ...prev, performedBy: getLastStaff() }))
+    }
+  }, [showCalibrationForm])
 
   const today = new Date().toISOString().split('T')[0]
   const now = new Date().toTimeString().slice(0, 5)
@@ -450,17 +465,12 @@ export default function Maintenance() {
             />
           </div>
 
-          <div>
-            <label className="label">Performed By *</label>
-            <input
-              type="text"
-              value={formData.performedBy}
-              onChange={e => setFormData({ ...formData, performedBy: e.target.value })}
-              className="input"
-              placeholder="Engineer/company name"
-              required
-            />
-          </div>
+          <StaffSelector
+            value={formData.performedBy}
+            onChange={val => setFormData({ ...formData, performedBy: val })}
+            label="Performed By"
+            required
+          />
 
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -544,17 +554,12 @@ export default function Maintenance() {
             </div>
           </div>
 
-          <div>
-            <label className="label">Performed By *</label>
-            <input
-              type="text"
-              value={calibrationData.performedBy}
-              onChange={e => setCalibrationData({ ...calibrationData, performedBy: e.target.value })}
-              className="input"
-              placeholder="Your name"
-              required
-            />
-          </div>
+          <StaffSelector
+            value={calibrationData.performedBy}
+            onChange={val => setCalibrationData({ ...calibrationData, performedBy: val })}
+            label="Performed By"
+            required
+          />
 
           <div className="flex gap-3 pt-2">
             <button
