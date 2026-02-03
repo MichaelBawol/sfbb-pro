@@ -18,6 +18,7 @@ import {
   WrenchIcon,
   BookOpenIcon,
   CalendarDaysIcon,
+  ClockIcon,
 } from 'lucide-react'
 
 // Main bottom nav items (max 5 for mobile)
@@ -32,6 +33,7 @@ const mainNav = [
 // Secondary nav items (shown in "More" menu)
 const moreNav = [
   { name: 'SFBB Diary', href: '/diary', icon: CalendarDaysIcon },
+  { name: 'Bulk Entry', href: '/bulk-entry', icon: ClockIcon },
   { name: 'Suppliers', href: '/suppliers', icon: TruckIcon },
   { name: 'Allergens', href: '/allergens', icon: AlertTriangleIcon },
   { name: 'Waste', href: '/waste', icon: TrashIcon },

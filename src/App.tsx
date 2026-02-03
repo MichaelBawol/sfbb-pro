@@ -15,6 +15,7 @@ import WasteManagement from './components/WasteManagement'
 import Maintenance from './components/Maintenance'
 import Resources from './components/Resources'
 import DiaryAndReview from './components/DiaryAndReview'
+import BulkEntry from './components/BulkEntry'
 
 function App() {
   const { isAuthenticated, isLoading } = useAppContext()
@@ -49,6 +50,7 @@ function App() {
         <Route path="/maintenance" element={<Maintenance />} />
         <Route path="/resources" element={<Resources />} />
         <Route path="/diary" element={<DiaryAndReview />} />
+        <Route path="/bulk-entry" element={<BulkEntry />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
