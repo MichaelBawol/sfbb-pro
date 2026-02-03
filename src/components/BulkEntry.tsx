@@ -6,6 +6,7 @@ import {
   ClipboardCheckIcon,
   CheckCircleIcon,
   Loader2Icon,
+  GaugeIcon,
 } from 'lucide-react'
 import { TemperatureLog, TEMP_THRESHOLDS } from '../types'
 
@@ -27,6 +28,12 @@ export default function BulkEntry() {
   const [includeFreezer, setIncludeFreezer] = useState(true)
   const [fridgeTemp, setFridgeTemp] = useState('3')
   const [freezerTemp, setFreezerTemp] = useState('-20')
+
+  // Probe calibration settings
+  const [includeProbeCalibration, setIncludeProbeCalibration] = useState(false)
+  const [probeFrequency, setProbeFrequency] = useState<'daily' | 'weekly' | 'once'>('weekly')
+  const [iceTemp, setIceTemp] = useState('0')
+  const [boilingTemp, setBoilingTemp] = useState('100')
 
   // Checklist settings
   const [includeOpening, setIncludeOpening] = useState(true)
@@ -85,9 +92,23 @@ export default function BulkEntry() {
     try {
       let tempCount = 0
       let checkCount = 0
+      let calibrationCount = 0
+
+      // Helper to check if we should add calibration for this date index
+      const shouldAddCalibration = (index: number): boolean => {
+        if (!includeProbeCalibration) return false
+        if (probeFrequency === 'daily') return true
+        if (probeFrequency === 'once') return index === 0
+        if (probeFrequency === 'weekly') {
+          // Add on first day and every 7th day
+          return index % 7 === 0
+        }
+        return false
+      }
 
       // Create temperature logs
-      for (const date of dates) {
+      for (let i = 0; i < dates.length; i++) {
+        const date = dates[i]
         if (includeFridge) {
           const temp = parseFloat(fridgeTemp)
           const fridgeAppliances = appliances.filter(a => a.type === 'fridge')
@@ -152,6 +173,21 @@ export default function BulkEntry() {
           }
         }
 
+        // Create probe calibration record
+        if (shouldAddCalibration(i)) {
+          await addTemperatureLog({
+            type: 'probe_calibration',
+            applianceName: 'Probe Thermometer',
+            iceTemp: parseFloat(iceTemp),
+            boilingTemp: parseFloat(boilingTemp),
+            time: '09:00',
+            date,
+            loggedBy: staffName,
+            isCompliant: true,
+          })
+          calibrationCount++
+        }
+
         // Create checklists
         if (includeOpening && checklistTemplates.openingChecks.length > 0) {
           await addChecklist({
@@ -188,7 +224,11 @@ export default function BulkEntry() {
         }
       }
 
-      setSuccess(`Successfully created ${tempCount} temperature logs and ${checkCount} checklists for ${totalDays} days`)
+      const parts = []
+      if (tempCount > 0) parts.push(`${tempCount} temperature logs`)
+      if (calibrationCount > 0) parts.push(`${calibrationCount} probe calibrations`)
+      if (checkCount > 0) parts.push(`${checkCount} checklists`)
+      setSuccess(`Successfully created ${parts.join(', ')} for ${totalDays} days`)
 
       // Reset form
       setStartDate('')
@@ -328,6 +368,112 @@ export default function BulkEntry() {
 
             <p className="text-xs text-slate-500">
               Fridge: 0-5°C compliant • Freezer: -18°C or below compliant
+            </p>
+          </div>
+        </div>
+
+        {/* Probe Calibration */}
+        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+          <div className="p-4 border-b border-slate-100 flex items-center gap-2">
+            <GaugeIcon className="w-5 h-5 text-violet-500" />
+            <h2 className="font-semibold text-slate-900">Probe Calibration</h2>
+          </div>
+          <div className="p-4 space-y-4">
+            <div className="flex items-center gap-3 p-3 bg-violet-50 rounded-xl">
+              <input
+                type="checkbox"
+                id="includeProbeCalibration"
+                checked={includeProbeCalibration}
+                onChange={e => setIncludeProbeCalibration(e.target.checked)}
+                className="w-5 h-5 rounded text-sfbb-500"
+              />
+              <label htmlFor="includeProbeCalibration" className="font-medium text-slate-900">
+                Include Probe Calibration Records
+              </label>
+            </div>
+
+            {includeProbeCalibration && (
+              <>
+                {/* Frequency */}
+                <div>
+                  <label className="label">Frequency</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setProbeFrequency('once')}
+                      className={`p-3 rounded-xl text-sm font-medium transition-all ${
+                        probeFrequency === 'once'
+                          ? 'bg-violet-100 text-violet-700 border-2 border-violet-500'
+                          : 'bg-slate-50 text-slate-600 border-2 border-transparent'
+                      }`}
+                    >
+                      Once
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setProbeFrequency('weekly')}
+                      className={`p-3 rounded-xl text-sm font-medium transition-all ${
+                        probeFrequency === 'weekly'
+                          ? 'bg-violet-100 text-violet-700 border-2 border-violet-500'
+                          : 'bg-slate-50 text-slate-600 border-2 border-transparent'
+                      }`}
+                    >
+                      Weekly
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setProbeFrequency('daily')}
+                      className={`p-3 rounded-xl text-sm font-medium transition-all ${
+                        probeFrequency === 'daily'
+                          ? 'bg-violet-100 text-violet-700 border-2 border-violet-500'
+                          : 'bg-slate-50 text-slate-600 border-2 border-transparent'
+                      }`}
+                    >
+                      Daily
+                    </button>
+                  </div>
+                </div>
+
+                {/* Temperature Inputs */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-3 bg-blue-50 rounded-xl">
+                    <label className="text-sm font-medium text-slate-700 block mb-2">
+                      Ice Water
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        value={iceTemp}
+                        onChange={e => setIceTemp(e.target.value)}
+                        className="flex-1 input text-center"
+                        step="0.1"
+                      />
+                      <span className="text-slate-500">°C</span>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-1">Target: -1 to 1°C</p>
+                  </div>
+                  <div className="p-3 bg-red-50 rounded-xl">
+                    <label className="text-sm font-medium text-slate-700 block mb-2">
+                      Boiling Water
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        value={boilingTemp}
+                        onChange={e => setBoilingTemp(e.target.value)}
+                        className="flex-1 input text-center"
+                        step="0.1"
+                      />
+                      <span className="text-slate-500">°C</span>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-1">Target: 99 to 101°C</p>
+                  </div>
+                </div>
+              </>
+            )}
+
+            <p className="text-xs text-slate-500">
+              Calibration records verify your thermometer is accurate
             </p>
           </div>
         </div>
