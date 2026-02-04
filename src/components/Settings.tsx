@@ -15,8 +15,13 @@ import {
   CheckIcon,
   ClipboardListIcon,
   LogOutIcon,
+  CreditCardIcon,
+  SparklesIcon,
+  CalendarIcon,
+  ExternalLinkIcon,
+  AlertCircleIcon,
 } from 'lucide-react'
-import { Appliance, Employee, EmployeePrivilege, ROLE_PRIVILEGES, PRIVILEGE_LABELS } from '../types'
+import { Appliance, Employee, EmployeePrivilege, ROLE_PRIVILEGES, PRIVILEGE_LABELS, TIER_LABELS, TIER_PRICES } from '../types'
 import PinEntry from './PinEntry'
 import ChecklistManager from './ChecklistManager'
 
@@ -38,9 +43,15 @@ export default function Settings() {
     hasPin,
     user,
     logout,
+    subscription,
+    isSubscriptionActive,
+    isInTrial,
+    getTrialDaysRemaining,
+    createCheckoutSession,
+    openCustomerPortal,
   } = useAppContext()
 
-  const [activeSection, setActiveSection] = useState<'business' | 'appliances' | 'employees' | 'checklists' | 'security'>('business')
+  const [activeSection, setActiveSection] = useState<'business' | 'appliances' | 'employees' | 'checklists' | 'subscription' | 'security'>('business')
   const [showApplianceForm, setShowApplianceForm] = useState(false)
   const [editingAppliance, setEditingAppliance] = useState<Appliance | null>(null)
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null)
@@ -50,6 +61,8 @@ export default function Settings() {
   const [pinError, setPinError] = useState('')
   const [pinSuccess, setPinSuccess] = useState('')
   const [createPinError, setCreatePinError] = useState('')
+  const [isLoadingCheckout, setIsLoadingCheckout] = useState(false)
+  const [isLoadingPortal, setIsLoadingPortal] = useState(false)
 
   // Computed states - no useEffect needed
   const userHasPin = hasPin()
@@ -244,6 +257,35 @@ export default function Settings() {
     { value: 'probe', label: 'Probe Thermometer' },
   ]
 
+  // Stripe price IDs - these should be set in environment variables
+  const STRIPE_STARTER_PRICE_ID = import.meta.env.VITE_STRIPE_STARTER_PRICE_ID || 'price_starter'
+  const STRIPE_PROFESSIONAL_PRICE_ID = import.meta.env.VITE_STRIPE_PROFESSIONAL_PRICE_ID || 'price_professional'
+
+  const handleUpgrade = async (tier: 'starter' | 'professional') => {
+    setIsLoadingCheckout(true)
+    const priceId = tier === 'starter' ? STRIPE_STARTER_PRICE_ID : STRIPE_PROFESSIONAL_PRICE_ID
+    const result = await createCheckoutSession(priceId)
+    setIsLoadingCheckout(false)
+
+    if (result.url) {
+      window.location.href = result.url
+    } else if (result.error) {
+      alert(`Error: ${result.error}`)
+    }
+  }
+
+  const handleManageSubscription = async () => {
+    setIsLoadingPortal(true)
+    const result = await openCustomerPortal()
+    setIsLoadingPortal(false)
+
+    if (result.url) {
+      window.location.href = result.url
+    } else if (result.error) {
+      alert(`Error: ${result.error}`)
+    }
+  }
+
   // Show Create PIN if user doesn't have one
   if (needsCreatePin) {
     return (
@@ -382,6 +424,17 @@ export default function Settings() {
         >
           <ClipboardListIcon className="w-4 h-4" />
           Checklists
+        </button>
+        <button
+          onClick={() => setActiveSection('subscription')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            activeSection === 'subscription'
+              ? 'bg-sfbb-100 text-sfbb-700'
+              : 'text-slate-600 hover:bg-slate-100'
+          }`}
+        >
+          <CreditCardIcon className="w-4 h-4" />
+          Subscription
         </button>
         <button
           onClick={() => setActiveSection('security')}
@@ -670,6 +723,215 @@ export default function Settings() {
             </p>
           </div>
           <ChecklistManager />
+        </div>
+      )}
+
+      {/* Subscription Section */}
+      {activeSection === 'subscription' && (
+        <div className="space-y-6">
+          {/* Current Plan */}
+          <div className="card p-6">
+            <div className="flex items-start justify-between mb-6">
+              <div>
+                <h3 className="text-lg font-semibold text-slate-900 mb-1">Current Plan</h3>
+                <p className="text-sm text-slate-500">
+                  Manage your subscription and billing
+                </p>
+              </div>
+              {subscription && (
+                <span className={`badge ${
+                  subscription.status === 'active' ? 'badge-success' :
+                  subscription.status === 'trialing' ? 'badge-info' :
+                  subscription.status === 'past_due' ? 'badge-warning' :
+                  'badge-error'
+                }`}>
+                  {subscription.status === 'trialing' ? 'Trial' :
+                   subscription.status === 'active' ? 'Active' :
+                   subscription.status === 'past_due' ? 'Past Due' :
+                   subscription.status.charAt(0).toUpperCase() + subscription.status.slice(1)}
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-xl mb-6">
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                subscription?.tier === 'professional' ? 'bg-gradient-to-br from-sfbb-500 to-sfbb-600' :
+                subscription?.tier === 'starter' ? 'bg-sfbb-100' :
+                'bg-slate-200'
+              }`}>
+                <SparklesIcon className={`w-6 h-6 ${
+                  subscription?.tier === 'professional' ? 'text-white' :
+                  subscription?.tier === 'starter' ? 'text-sfbb-600' :
+                  'text-slate-500'
+                }`} />
+              </div>
+              <div className="flex-1">
+                <h4 className="font-semibold text-slate-900">
+                  {TIER_LABELS[subscription?.tier || 'free']}
+                </h4>
+                {subscription?.tier !== 'free' && (
+                  <p className="text-sm text-slate-500">
+                    £{TIER_PRICES[subscription?.tier as 'starter' | 'professional']}/month
+                  </p>
+                )}
+              </div>
+              {subscription && isSubscriptionActive() && (
+                <button
+                  onClick={handleManageSubscription}
+                  disabled={isLoadingPortal}
+                  className="btn-secondary flex items-center gap-2"
+                >
+                  {isLoadingPortal ? (
+                    <RefreshCwIcon className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <ExternalLinkIcon className="w-4 h-4" />
+                  )}
+                  Manage
+                </button>
+              )}
+            </div>
+
+            {/* Trial Banner */}
+            {isInTrial() && (
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl mb-6">
+                <div className="flex items-start gap-3">
+                  <CalendarIcon className="w-5 h-5 text-blue-600 mt-0.5" />
+                  <div>
+                    <h4 className="font-medium text-blue-900">Free Trial</h4>
+                    <p className="text-sm text-blue-700">
+                      You have {getTrialDaysRemaining()} days remaining in your free trial.
+                      {subscription?.trialEnd && (
+                        <> Trial ends on {new Date(subscription.trialEnd).toLocaleDateString()}.</>
+                      )}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Past Due Warning */}
+            {subscription?.status === 'past_due' && (
+              <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl mb-6">
+                <div className="flex items-start gap-3">
+                  <AlertCircleIcon className="w-5 h-5 text-amber-600 mt-0.5" />
+                  <div>
+                    <h4 className="font-medium text-amber-900">Payment Required</h4>
+                    <p className="text-sm text-amber-700">
+                      Your last payment failed. Please update your payment method to continue using premium features.
+                    </p>
+                    <button
+                      onClick={handleManageSubscription}
+                      disabled={isLoadingPortal}
+                      className="mt-2 text-sm font-medium text-amber-700 hover:text-amber-900"
+                    >
+                      Update payment method →
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Billing Info */}
+            {subscription && isSubscriptionActive() && subscription.currentPeriodEnd && (
+              <div className="text-sm text-slate-500">
+                {subscription.cancelAtPeriodEnd ? (
+                  <p>Your subscription will end on {new Date(subscription.currentPeriodEnd).toLocaleDateString()}</p>
+                ) : (
+                  <p>Next billing date: {new Date(subscription.currentPeriodEnd).toLocaleDateString()}</p>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Upgrade Options */}
+          {(!subscription || !isSubscriptionActive() || subscription.tier !== 'professional') && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-slate-900">
+                {!subscription || !isSubscriptionActive() ? 'Choose a Plan' : 'Upgrade Your Plan'}
+              </h3>
+
+              <div className="grid md:grid-cols-2 gap-4">
+                {/* Starter Plan */}
+                <div className={`card p-6 ${subscription?.tier === 'starter' ? 'ring-2 ring-sfbb-500' : ''}`}>
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-xl font-bold text-slate-900">Starter</h4>
+                    {subscription?.tier === 'starter' && (
+                      <span className="badge badge-success">Current</span>
+                    )}
+                  </div>
+                  <div className="mb-4">
+                    <span className="text-3xl font-bold text-slate-900">£15</span>
+                    <span className="text-slate-500">/month</span>
+                  </div>
+                  <p className="text-sm text-slate-600 mb-4">Perfect for single-location businesses</p>
+                  <ul className="space-y-2 mb-6 text-sm">
+                    {['Temperature logging', 'Daily checklists', 'Cleaning schedules', 'SFBB Diary', 'Staff management', 'Allergen tracking', '1 location'].map((feature) => (
+                      <li key={feature} className="flex items-center gap-2">
+                        <CheckIcon className="w-4 h-4 text-emerald-500" />
+                        <span className="text-slate-600">{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  {subscription?.tier !== 'starter' && (
+                    <button
+                      onClick={() => handleUpgrade('starter')}
+                      disabled={isLoadingCheckout}
+                      className="w-full btn-secondary flex items-center justify-center gap-2"
+                    >
+                      {isLoadingCheckout ? (
+                        <RefreshCwIcon className="w-4 h-4 animate-spin" />
+                      ) : null}
+                      Start Free Trial
+                    </button>
+                  )}
+                </div>
+
+                {/* Professional Plan */}
+                <div className={`card p-6 relative ${subscription?.tier === 'professional' ? 'ring-2 ring-sfbb-500' : 'ring-2 ring-sfbb-200'}`}>
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                    <span className="bg-sfbb-500 text-white text-xs font-medium px-3 py-1 rounded-full">
+                      Most Popular
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-xl font-bold text-slate-900">Professional</h4>
+                    {subscription?.tier === 'professional' && (
+                      <span className="badge badge-success">Current</span>
+                    )}
+                  </div>
+                  <div className="mb-4">
+                    <span className="text-3xl font-bold text-slate-900">£30</span>
+                    <span className="text-slate-500">/month</span>
+                  </div>
+                  <p className="text-sm text-slate-600 mb-4">For growing businesses with multiple sites</p>
+                  <ul className="space-y-2 mb-6 text-sm">
+                    {['Everything in Starter', 'PDF export for EHO', 'Email reminders', 'Multi-location support', 'Priority support', 'Advanced reporting', 'Unlimited locations'].map((feature) => (
+                      <li key={feature} className="flex items-center gap-2">
+                        <CheckIcon className="w-4 h-4 text-emerald-500" />
+                        <span className="text-slate-600">{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  {subscription?.tier !== 'professional' && (
+                    <button
+                      onClick={() => handleUpgrade('professional')}
+                      disabled={isLoadingCheckout}
+                      className="w-full btn-primary flex items-center justify-center gap-2"
+                    >
+                      {isLoadingCheckout ? (
+                        <RefreshCwIcon className="w-4 h-4 animate-spin" />
+                      ) : null}
+                      {subscription?.tier === 'starter' ? 'Upgrade' : 'Start Free Trial'}
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <p className="text-center text-sm text-slate-500">
+                All plans include a 14-day free trial. No credit card required to start.
+              </p>
+            </div>
+          )}
         </div>
       )}
 

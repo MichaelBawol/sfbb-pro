@@ -344,3 +344,94 @@ export const TEMP_THRESHOLDS = {
   probe_ice: { min: -1, max: 1 },
   probe_boiling: { min: 99, max: 101 },
 }
+
+// Subscription types
+export type SubscriptionTier = 'free' | 'starter' | 'professional'
+
+export type SubscriptionStatus =
+  | 'incomplete'
+  | 'incomplete_expired'
+  | 'trialing'
+  | 'active'
+  | 'past_due'
+  | 'canceled'
+  | 'unpaid'
+  | 'paused'
+
+export interface Subscription {
+  id: string
+  userId: string
+  stripeCustomerId: string
+  stripeSubscriptionId: string | null
+  stripePriceId: string | null
+  tier: SubscriptionTier
+  status: SubscriptionStatus
+  trialStart: string | null
+  trialEnd: string | null
+  currentPeriodStart: string | null
+  currentPeriodEnd: string | null
+  cancelAtPeriodEnd: boolean
+  canceledAt: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export type SubscriptionFeature =
+  | 'temperature_logging'
+  | 'daily_checklists'
+  | 'cleaning_schedules'
+  | 'sfbb_diary'
+  | 'staff_management'
+  | 'allergen_tracking'
+  | 'single_location'
+  | 'pdf_export'
+  | 'email_reminders'
+  | 'multi_location'
+  | 'priority_support'
+  | 'advanced_reporting'
+
+export const TIER_FEATURES: Record<SubscriptionTier, SubscriptionFeature[]> = {
+  free: [
+    'temperature_logging',
+    'daily_checklists',
+    'cleaning_schedules',
+    'sfbb_diary',
+    'staff_management',
+    'allergen_tracking',
+    'single_location',
+  ],
+  starter: [
+    'temperature_logging',
+    'daily_checklists',
+    'cleaning_schedules',
+    'sfbb_diary',
+    'staff_management',
+    'allergen_tracking',
+    'single_location',
+  ],
+  professional: [
+    'temperature_logging',
+    'daily_checklists',
+    'cleaning_schedules',
+    'sfbb_diary',
+    'staff_management',
+    'allergen_tracking',
+    'single_location',
+    'pdf_export',
+    'email_reminders',
+    'multi_location',
+    'priority_support',
+    'advanced_reporting',
+  ],
+}
+
+export const TIER_LABELS: Record<SubscriptionTier, string> = {
+  free: 'Free',
+  starter: 'Starter',
+  professional: 'Professional',
+}
+
+export const TIER_PRICES: Record<Exclude<SubscriptionTier, 'free'>, string> = {
+  starter: '15.00',
+  professional: '30.00',
+}

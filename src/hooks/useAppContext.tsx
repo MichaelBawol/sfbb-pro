@@ -19,6 +19,9 @@ import {
   DiaryEntry,
   WeeklyExtraCheck,
   FourWeeklyReview,
+  Subscription,
+  SubscriptionFeature,
+  TIER_FEATURES,
 } from '../types'
 
 interface AppState {
@@ -30,6 +33,9 @@ interface AppState {
 
   // Business
   business: Business | null
+
+  // Subscription
+  subscription: Subscription | null
 
   // Data
   employees: Employee[]
@@ -141,6 +147,14 @@ interface AppContextType extends AppState {
   setActiveTab: (tab: string) => void
   toggleSidebar: () => void
 
+  // Subscription actions
+  hasFeature: (feature: SubscriptionFeature) => boolean
+  isSubscriptionActive: () => boolean
+  isInTrial: () => boolean
+  getTrialDaysRemaining: () => number
+  createCheckoutSession: (priceId: string) => Promise<{ url?: string; error?: string }>
+  openCustomerPortal: () => Promise<{ url?: string; error?: string }>
+
   // Data refresh
   refreshData: () => Promise<void>
 }
@@ -162,6 +176,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     isAuthenticated: false,
     isLoading: true,
     business: null,
+    subscription: null,
     employees: [],
     checklists: [],
     cleaningRecords: [],
@@ -239,6 +254,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         { data: diaryEntries },
         { data: weeklyExtraChecks },
         { data: fourWeeklyReviews },
+        { data: subscriptionData },
       ] = await Promise.all([
         supabase.from('employees').select('*, certificates(*), training_records(*)').eq('user_id', userId),
         supabase.from('appliances').select('*').eq('user_id', userId),
@@ -255,6 +271,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         supabase.from('diary_entries').select('*').eq('user_id', userId).order('date', { ascending: false }),
         supabase.from('weekly_extra_checks').select('*').eq('user_id', userId).order('week_commencing', { ascending: false }),
         supabase.from('four_weekly_reviews').select('*').eq('user_id', userId).order('review_date', { ascending: false }),
+        supabase.from('subscriptions').select('*').eq('user_id', userId).maybeSingle(),
       ])
 
       // Transform data from snake_case to camelCase
@@ -457,6 +474,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
         signedOff: r.signed_off,
       }))
 
+      const transformedSubscription: Subscription | null = subscriptionData ? {
+        id: subscriptionData.id,
+        userId: subscriptionData.user_id,
+        stripeCustomerId: subscriptionData.stripe_customer_id,
+        stripeSubscriptionId: subscriptionData.stripe_subscription_id,
+        stripePriceId: subscriptionData.stripe_price_id,
+        tier: subscriptionData.tier,
+        status: subscriptionData.status,
+        trialStart: subscriptionData.trial_start,
+        trialEnd: subscriptionData.trial_end,
+        currentPeriodStart: subscriptionData.current_period_start,
+        currentPeriodEnd: subscriptionData.current_period_end,
+        cancelAtPeriodEnd: subscriptionData.cancel_at_period_end,
+        canceledAt: subscriptionData.canceled_at,
+        createdAt: subscriptionData.created_at,
+        updatedAt: subscriptionData.updated_at,
+      } : null
+
       console.log('Setting state with profile:', profile?.email)
 
       setState(prev => ({
@@ -471,6 +506,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         } : null,
         isAuthenticated: !!profile,
         business: transformedBusiness,
+        subscription: transformedSubscription,
         employees: transformedEmployees,
         appliances: transformedAppliances,
         temperatureLogs: transformedTempLogs,
@@ -527,6 +563,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           isAuthenticated: false,
           isLoading: false,
           business: null,
+          subscription: null,
           employees: [],
           checklists: [],
           cleaningRecords: [],
@@ -1433,6 +1470,102 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  // Subscription helpers
+  const hasFeature = (feature: SubscriptionFeature): boolean => {
+    const tier = state.subscription?.tier || 'free'
+    const activeStatuses = ['trialing', 'active']
+    const isActive = state.subscription ? activeStatuses.includes(state.subscription.status) : false
+
+    // If no active subscription, use free tier features
+    if (!isActive) {
+      return TIER_FEATURES.free.includes(feature)
+    }
+
+    return TIER_FEATURES[tier].includes(feature)
+  }
+
+  const isSubscriptionActive = (): boolean => {
+    if (!state.subscription) return false
+    const activeStatuses = ['trialing', 'active']
+    return activeStatuses.includes(state.subscription.status)
+  }
+
+  const isInTrial = (): boolean => {
+    return state.subscription?.status === 'trialing'
+  }
+
+  const getTrialDaysRemaining = (): number => {
+    if (!state.subscription?.trialEnd) return 0
+    const trialEnd = new Date(state.subscription.trialEnd)
+    const now = new Date()
+    const diffTime = trialEnd.getTime() - now.getTime()
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    return Math.max(0, diffDays)
+  }
+
+  const createCheckoutSession = async (priceId: string): Promise<{ url?: string; error?: string }> => {
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-checkout-session`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({
+            priceId,
+            email: state.user?.email,
+            userId: state.user?.id,
+            successUrl: `${window.location.origin}/settings?session_id={CHECKOUT_SESSION_ID}`,
+            cancelUrl: `${window.location.origin}/settings`,
+          }),
+        }
+      )
+
+      const data = await response.json()
+      if (data.error) {
+        return { error: data.error }
+      }
+      return { url: data.url }
+    } catch (error) {
+      console.error('Error creating checkout session:', error)
+      return { error: 'Failed to create checkout session' }
+    }
+  }
+
+  const openCustomerPortal = async (): Promise<{ url?: string; error?: string }> => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        return { error: 'Not authenticated' }
+      }
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-portal-session`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            returnUrl: `${window.location.origin}/settings`,
+          }),
+        }
+      )
+
+      const data = await response.json()
+      if (data.error) {
+        return { error: data.error }
+      }
+      return { url: data.url }
+    } catch (error) {
+      console.error('Error creating portal session:', error)
+      return { error: 'Failed to open customer portal' }
+    }
+  }
+
   const value: AppContextType = {
     ...state,
     login,
@@ -1483,6 +1616,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     updateFourWeeklyReview,
     setActiveTab,
     toggleSidebar,
+    hasFeature,
+    isSubscriptionActive,
+    isInTrial,
+    getTrialDaysRemaining,
+    createCheckoutSession,
+    openCustomerPortal,
     refreshData,
   }
 

@@ -533,3 +533,39 @@ CREATE POLICY "Users can manage own 4-weekly reviews" ON four_weekly_reviews FOR
 CREATE INDEX IF NOT EXISTS idx_diary_entries_user_date ON diary_entries(user_id, date);
 CREATE INDEX IF NOT EXISTS idx_weekly_extra_checks_user_week ON weekly_extra_checks(user_id, week_commencing);
 CREATE INDEX IF NOT EXISTS idx_four_weekly_reviews_user_date ON four_weekly_reviews(user_id, review_date);
+
+-- ============================================
+-- SUBSCRIPTIONS TABLE (Stripe integration)
+-- ============================================
+CREATE TABLE IF NOT EXISTS subscriptions (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  stripe_customer_id TEXT NOT NULL,
+  stripe_subscription_id TEXT UNIQUE,
+  stripe_price_id TEXT,
+  tier TEXT NOT NULL DEFAULT 'free' CHECK (tier IN ('free', 'starter', 'professional')),
+  status TEXT NOT NULL DEFAULT 'incomplete',
+  trial_start TIMESTAMPTZ,
+  trial_end TIMESTAMPTZ,
+  current_period_start TIMESTAMPTZ,
+  current_period_end TIMESTAMPTZ,
+  cancel_at_period_end BOOLEAN DEFAULT FALSE,
+  canceled_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id)
+);
+
+-- Enable RLS
+ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policy
+CREATE POLICY "Users can view own subscription" ON subscriptions FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Service role can manage subscriptions" ON subscriptions FOR ALL USING (true);
+
+-- Index
+CREATE INDEX IF NOT EXISTS idx_subscriptions_user_id ON subscriptions(user_id);
+CREATE INDEX IF NOT EXISTS idx_subscriptions_stripe_customer_id ON subscriptions(stripe_customer_id);
+
+-- Updated at trigger
+CREATE TRIGGER update_subscriptions_updated_at BEFORE UPDATE ON subscriptions FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
