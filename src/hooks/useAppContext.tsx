@@ -211,7 +211,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   })
 
   // Generate alerts based on current data
-  const generateLocalAlerts = useCallback(async (userId: string, data: {
+  const generateLocalAlerts = useCallback(async (userId: string, locationId: string | null, data: {
     employees: Employee[]
     checklists: Checklist[]
     cleaningRecords: CleaningRecord[]
@@ -365,6 +365,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           .from('alerts')
           .insert(uniqueAlerts.map(a => ({
             user_id: userId,
+            location_id: locationId,
             type: a.type,
             severity: a.severity,
             title: a.title,
@@ -505,6 +506,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         location: a.location,
         minTemp: a.min_temp,
         maxTemp: a.max_temp,
+        locationId: a.location_id,
       }))
 
       const transformedTempLogs = (temperatureLogs || []).map((t: any) => ({
@@ -520,6 +522,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         loggedBy: t.logged_by,
         notes: t.notes,
         isCompliant: t.is_compliant,
+        locationId: t.location_id,
       }))
 
       const transformedChecklists = (checklists || []).map((c: any) => ({
@@ -530,6 +533,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         completedBy: c.completed_by,
         remarks: c.remarks,
         signedOff: c.signed_off,
+        locationId: c.location_id,
       }))
 
       const transformedCleaningRecords = (cleaningRecords || []).map((c: any) => ({
@@ -539,6 +543,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         tasks: c.tasks,
         completedBy: c.completed_by,
         signedOff: c.signed_off,
+        locationId: c.location_id,
       }))
 
       const transformedSuppliers = (suppliers || []).map((s: any) => ({
@@ -552,6 +557,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         lastDelivery: s.last_delivery,
         rating: s.rating,
         notes: s.notes,
+        locationId: s.location_id,
       }))
 
       const transformedDishes = (dishes || []).map((d: any) => ({
@@ -563,6 +569,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         crossContaminationRisks: d.cross_contamination_risks || [],
         cookingInstructions: d.cooking_instructions,
         storageInstructions: d.storage_instructions,
+        locationId: d.location_id,
       }))
 
       const transformedWasteLogs = (wasteLogs || []).map((w: any) => ({
@@ -574,6 +581,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         reason: w.reason,
         loggedBy: w.logged_by,
         cost: w.cost,
+        locationId: w.location_id,
       }))
 
       const transformedMaintenanceLogs = (maintenanceLogs || []).map((m: any) => ({
@@ -586,6 +594,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         performedBy: m.performed_by,
         cost: m.cost,
         nextServiceDate: m.next_service_date,
+        locationId: m.location_id,
       }))
 
       const transformedSpotChecks = (spotChecks || []).map((s: any) => ({
@@ -597,6 +606,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         items: s.items,
         overallResult: s.overall_result,
         correctiveAction: s.corrective_action,
+        locationId: s.location_id,
       }))
 
       const transformedAlerts = (alerts || []).map((a: any) => ({
@@ -608,6 +618,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         date: a.date,
         acknowledged: a.acknowledged,
         relatedId: a.related_id,
+        locationId: a.location_id,
       }))
 
       const transformedTemplates: ChecklistTemplates = templates ? {
@@ -627,6 +638,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         closingChecksDone: d.closing_checks_done,
         staffName: d.staff_name,
         signedOff: d.signed_off,
+        locationId: d.location_id,
       }))
 
       const transformedWeeklyExtraChecks = (weeklyExtraChecks || []).map((w: any) => ({
@@ -635,6 +647,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         extraChecksNotes: w.extra_checks_notes,
         staffName: w.staff_name,
         signedOff: w.signed_off,
+        locationId: w.location_id,
       }))
 
       const transformedFourWeeklyReviews = (fourWeeklyReviews || []).map((r: any) => ({
@@ -659,6 +672,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         additionalDetails: r.additional_details,
         managerName: r.manager_name,
         signedOff: r.signed_off,
+        locationId: r.location_id,
       }))
 
       const transformedSubscription: Subscription | null = subscriptionData ? {
@@ -679,8 +693,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         updatedAt: subscriptionData.updated_at,
       } : null
 
-      console.log('Raw locations data:', locationsData)
-
       const transformedLocations: Location[] = (locationsData || []).map((l: any) => ({
         id: l.id,
         name: l.name,
@@ -691,12 +703,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         isPrimary: l.is_primary,
       }))
 
-      console.log('Transformed locations:', transformedLocations)
-
       // Set active location to primary or first location
       const primaryLocation = transformedLocations.find(l => l.isPrimary) || transformedLocations[0]
 
-      console.log('Primary location:', primaryLocation)
       console.log('Setting state with profile:', profile?.email)
 
       setState(prev => ({
@@ -733,7 +742,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }))
 
       // Generate local alerts based on fetched data
-      await generateLocalAlerts(userId, {
+      await generateLocalAlerts(userId, primaryLocation?.id || null, {
         employees: transformedEmployees,
         checklists: transformedChecklists,
         cleaningRecords: transformedCleaningRecords,
@@ -1027,6 +1036,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       .from('checklists')
       .insert({
         user_id: state.supabaseUser.id,
+        location_id: state.activeLocationId,
         type: checklist.type,
         date: checklist.date,
         items: checklist.items,
@@ -1083,6 +1093,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       .from('temperature_logs')
       .insert({
         user_id: state.supabaseUser.id,
+        location_id: state.activeLocationId,
         type: log.type,
         appliance_id: log.applianceId,
         appliance_name: log.applianceName,
@@ -1129,6 +1140,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       .from('cleaning_records')
       .insert({
         user_id: state.supabaseUser.id,
+        location_id: state.activeLocationId,
         date: record.date,
         frequency: record.frequency,
         tasks: record.tasks,
@@ -1169,6 +1181,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       .from('suppliers')
       .insert({
         user_id: state.supabaseUser.id,
+        location_id: state.activeLocationId,
         name: supplier.name,
         contact: supplier.contact,
         phone: supplier.phone,
@@ -1227,6 +1240,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       .from('dishes')
       .insert({
         user_id: state.supabaseUser.id,
+        location_id: state.activeLocationId,
         name: dish.name,
         description: dish.description,
         category: dish.category,
@@ -1281,6 +1295,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       .from('waste_logs')
       .insert({
         user_id: state.supabaseUser.id,
+        location_id: state.activeLocationId,
         date: log.date,
         time: log.time,
         item_name: log.itemName,
@@ -1307,6 +1322,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       .from('maintenance_logs')
       .insert({
         user_id: state.supabaseUser.id,
+        location_id: state.activeLocationId,
         date: log.date,
         appliance_id: log.applianceId,
         appliance_name: log.applianceName,
@@ -1334,6 +1350,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       .from('spot_checks')
       .insert({
         user_id: state.supabaseUser.id,
+        location_id: state.activeLocationId,
         date: check.date,
         time: check.time,
         area: check.area,
@@ -1381,6 +1398,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       .from('appliances')
       .insert({
         user_id: state.supabaseUser.id,
+        location_id: state.activeLocationId,
         name: appliance.name,
         type: appliance.type,
         location: appliance.location,
@@ -1540,6 +1558,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       .from('diary_entries')
       .insert({
         user_id: state.supabaseUser.id,
+        location_id: state.activeLocationId,
         date: entry.date,
         day_of_week: entry.dayOfWeek,
         problems_changes: entry.problemsChanges,
@@ -1588,6 +1607,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       .from('weekly_extra_checks')
       .insert({
         user_id: state.supabaseUser.id,
+        location_id: state.activeLocationId,
         week_commencing: check.weekCommencing,
         extra_checks_notes: check.extraChecksNotes,
         staff_name: check.staffName,
@@ -1631,6 +1651,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       .from('four_weekly_reviews')
       .insert({
         user_id: state.supabaseUser.id,
+        location_id: state.activeLocationId,
         review_date: review.reviewDate,
         week_commencing: review.weekCommencing,
         problems_observed: review.problemsObserved,
@@ -1876,8 +1897,43 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  // Filter data by active location (show records with matching location_id or null location_id for legacy data)
+  const filterByLocation = <T,>(items: (T & { locationId?: string | null })[]): T[] => {
+    if (!state.activeLocationId) return items
+    return items.filter(item => !item.locationId || item.locationId === state.activeLocationId)
+  }
+
+  // Filter all location-specific data
+  const filteredTemperatureLogs = filterByLocation(state.temperatureLogs as (TemperatureLog & { locationId?: string | null })[])
+  const filteredChecklists = filterByLocation(state.checklists as (Checklist & { locationId?: string | null })[])
+  const filteredCleaningRecords = filterByLocation(state.cleaningRecords as (CleaningRecord & { locationId?: string | null })[])
+  const filteredSuppliers = filterByLocation(state.suppliers as (Supplier & { locationId?: string | null })[])
+  const filteredDishes = filterByLocation(state.dishes as (Dish & { locationId?: string | null })[])
+  const filteredWasteLogs = filterByLocation(state.wasteLogs as (WasteLog & { locationId?: string | null })[])
+  const filteredMaintenanceLogs = filterByLocation(state.maintenanceLogs as (MaintenanceLog & { locationId?: string | null })[])
+  const filteredSpotChecks = filterByLocation(state.spotChecks as (SpotCheck & { locationId?: string | null })[])
+  const filteredAlerts = filterByLocation(state.alerts as (Alert & { locationId?: string | null })[])
+  const filteredAppliances = filterByLocation(state.appliances as (Appliance & { locationId?: string | null })[])
+  const filteredDiaryEntries = filterByLocation(state.diaryEntries as (DiaryEntry & { locationId?: string | null })[])
+  const filteredWeeklyExtraChecks = filterByLocation(state.weeklyExtraChecks as (WeeklyExtraCheck & { locationId?: string | null })[])
+  const filteredFourWeeklyReviews = filterByLocation(state.fourWeeklyReviews as (FourWeeklyReview & { locationId?: string | null })[])
+
   const value: AppContextType = {
     ...state,
+    // Override data arrays with location-filtered versions
+    temperatureLogs: filteredTemperatureLogs,
+    checklists: filteredChecklists,
+    cleaningRecords: filteredCleaningRecords,
+    suppliers: filteredSuppliers,
+    dishes: filteredDishes,
+    wasteLogs: filteredWasteLogs,
+    maintenanceLogs: filteredMaintenanceLogs,
+    spotChecks: filteredSpotChecks,
+    alerts: filteredAlerts,
+    appliances: filteredAppliances,
+    diaryEntries: filteredDiaryEntries,
+    weeklyExtraChecks: filteredWeeklyExtraChecks,
+    fourWeeklyReviews: filteredFourWeeklyReviews,
     login,
     register,
     logout,
