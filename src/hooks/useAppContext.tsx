@@ -158,6 +158,8 @@ interface AppContextType extends AppState {
   deleteLocation: (id: string) => Promise<void>
   setActiveLocation: (id: string) => void
   clearLocationData: (locationId: string) => Promise<void>
+  clearLegacyData: () => Promise<void>
+  assignLegacyDataToLocation: (locationId: string) => Promise<void>
 
   // Subscription actions
   hasFeature: (feature: SubscriptionFeature) => boolean
@@ -1785,6 +1787,100 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setState(prev => ({ ...prev, activeLocationId: id }))
   }
 
+  // Clear all legacy data (records with null location_id)
+  const clearLegacyData = async () => {
+    if (!state.supabaseUser) return
+
+    const tables = [
+      'temperature_logs',
+      'checklists',
+      'cleaning_records',
+      'suppliers',
+      'dishes',
+      'waste_logs',
+      'maintenance_logs',
+      'spot_checks',
+      'alerts',
+      'appliances',
+      'diary_entries',
+      'weekly_extra_checks',
+      'four_weekly_reviews',
+    ]
+
+    for (const table of tables) {
+      await supabase
+        .from(table)
+        .delete()
+        .eq('user_id', state.supabaseUser.id)
+        .is('location_id', null)
+    }
+
+    // Update local state to remove legacy records
+    setState(prev => ({
+      ...prev,
+      temperatureLogs: prev.temperatureLogs.filter((r: any) => r.locationId != null),
+      checklists: prev.checklists.filter((r: any) => r.locationId != null),
+      cleaningRecords: prev.cleaningRecords.filter((r: any) => r.locationId != null),
+      suppliers: prev.suppliers.filter((r: any) => r.locationId != null),
+      dishes: prev.dishes.filter((r: any) => r.locationId != null),
+      wasteLogs: prev.wasteLogs.filter((r: any) => r.locationId != null),
+      maintenanceLogs: prev.maintenanceLogs.filter((r: any) => r.locationId != null),
+      spotChecks: prev.spotChecks.filter((r: any) => r.locationId != null),
+      alerts: prev.alerts.filter((r: any) => r.locationId != null),
+      appliances: prev.appliances.filter((r: any) => r.locationId != null),
+      diaryEntries: prev.diaryEntries.filter((r: any) => r.locationId != null),
+      weeklyExtraChecks: prev.weeklyExtraChecks.filter((r: any) => r.locationId != null),
+      fourWeeklyReviews: prev.fourWeeklyReviews.filter((r: any) => r.locationId != null),
+    }))
+  }
+
+  // Assign all legacy data to a specific location
+  const assignLegacyDataToLocation = async (locationId: string) => {
+    if (!state.supabaseUser) return
+
+    const tables = [
+      'temperature_logs',
+      'checklists',
+      'cleaning_records',
+      'suppliers',
+      'dishes',
+      'waste_logs',
+      'maintenance_logs',
+      'spot_checks',
+      'alerts',
+      'appliances',
+      'diary_entries',
+      'weekly_extra_checks',
+      'four_weekly_reviews',
+    ]
+
+    for (const table of tables) {
+      await supabase
+        .from(table)
+        .update({ location_id: locationId })
+        .eq('user_id', state.supabaseUser.id)
+        .is('location_id', null)
+    }
+
+    // Update local state to assign legacy records to the location
+    setState(prev => ({
+      ...prev,
+      temperatureLogs: prev.temperatureLogs.map((r: any) => r.locationId == null ? { ...r, locationId } : r),
+      checklists: prev.checklists.map((r: any) => r.locationId == null ? { ...r, locationId } : r),
+      cleaningRecords: prev.cleaningRecords.map((r: any) => r.locationId == null ? { ...r, locationId } : r),
+      suppliers: prev.suppliers.map((r: any) => r.locationId == null ? { ...r, locationId } : r),
+      dishes: prev.dishes.map((r: any) => r.locationId == null ? { ...r, locationId } : r),
+      wasteLogs: prev.wasteLogs.map((r: any) => r.locationId == null ? { ...r, locationId } : r),
+      maintenanceLogs: prev.maintenanceLogs.map((r: any) => r.locationId == null ? { ...r, locationId } : r),
+      spotChecks: prev.spotChecks.map((r: any) => r.locationId == null ? { ...r, locationId } : r),
+      alerts: prev.alerts.map((r: any) => r.locationId == null ? { ...r, locationId } : r),
+      appliances: prev.appliances.map((r: any) => r.locationId == null ? { ...r, locationId } : r),
+      diaryEntries: prev.diaryEntries.map((r: any) => r.locationId == null ? { ...r, locationId } : r),
+      weeklyExtraChecks: prev.weeklyExtraChecks.map((r: any) => r.locationId == null ? { ...r, locationId } : r),
+      fourWeeklyReviews: prev.fourWeeklyReviews.map((r: any) => r.locationId == null ? { ...r, locationId } : r),
+    }))
+  }
+
   // Clear all data for a specific location
   const clearLocationData = async (locationId: string) => {
     if (!state.supabaseUser) return
@@ -2034,6 +2130,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     deleteLocation,
     setActiveLocation,
     clearLocationData,
+    clearLegacyData,
+    assignLegacyDataToLocation,
     setActiveTab,
     toggleSidebar,
     hasFeature,

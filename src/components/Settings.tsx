@@ -54,6 +54,8 @@ export default function Settings() {
     updateLocation,
     deleteLocation,
     clearLocationData,
+    clearLegacyData,
+    assignLegacyDataToLocation,
     hasFeature,
   } = useAppContext()
 
@@ -81,6 +83,9 @@ export default function Settings() {
   })
   const [clearingLocationId, setClearingLocationId] = useState<string | null>(null)
   const [isClearingData, setIsClearingData] = useState(false)
+  const [showLegacyDataModal, setShowLegacyDataModal] = useState<'clear' | 'assign' | null>(null)
+  const [assignToLocationId, setAssignToLocationId] = useState<string>('')
+  const [isProcessingLegacy, setIsProcessingLegacy] = useState(false)
 
   // Computed states - no useEffect needed
   const userHasPin = hasPin()
@@ -1067,6 +1072,135 @@ export default function Settings() {
                 </div>
               ))}
             </div>
+          )}
+
+          {/* Legacy Data Management */}
+          {locations.length > 0 && (
+            <div className="card p-4 mt-6 bg-amber-50 border-amber-200">
+              <div className="flex items-start gap-3">
+                <AlertCircleIcon className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <h4 className="font-medium text-amber-900">Legacy Data</h4>
+                  <p className="text-sm text-amber-700 mt-1">
+                    Data created before multi-location support shows on all locations.
+                    You can assign it to a specific location or clear it.
+                  </p>
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    <button
+                      onClick={() => {
+                        setAssignToLocationId(locations[0]?.id || '')
+                        setShowLegacyDataModal('assign')
+                      }}
+                      className="text-sm px-3 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-800 rounded-lg font-medium"
+                    >
+                      Assign to a location
+                    </button>
+                    <button
+                      onClick={() => setShowLegacyDataModal('clear')}
+                      className="text-sm px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg font-medium"
+                    >
+                      Clear legacy data
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Legacy Data Modal */}
+          {showLegacyDataModal && (
+            <>
+              <div className="fixed inset-0 bg-black/50 z-50" onClick={() => !isProcessingLegacy && setShowLegacyDataModal(null)} />
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+                  {showLegacyDataModal === 'assign' ? (
+                    <>
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="p-2 bg-sfbb-100 rounded-full">
+                          <CheckIcon className="w-6 h-6 text-sfbb-600" />
+                        </div>
+                        <h3 className="text-lg font-semibold text-slate-900">Assign Legacy Data</h3>
+                      </div>
+                      <p className="text-slate-600 mb-4">
+                        All existing data without a location will be assigned to the selected location.
+                      </p>
+                      <select
+                        value={assignToLocationId}
+                        onChange={(e) => setAssignToLocationId(e.target.value)}
+                        className="input w-full mb-4"
+                      >
+                        {locations.map(loc => (
+                          <option key={loc.id} value={loc.id}>{loc.name}</option>
+                        ))}
+                      </select>
+                      <div className="flex gap-3">
+                        <button
+                          onClick={() => setShowLegacyDataModal(null)}
+                          disabled={isProcessingLegacy}
+                          className="flex-1 btn-secondary"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={async () => {
+                            if (!assignToLocationId) return
+                            setIsProcessingLegacy(true)
+                            await assignLegacyDataToLocation(assignToLocationId)
+                            setIsProcessingLegacy(false)
+                            setShowLegacyDataModal(null)
+                          }}
+                          disabled={isProcessingLegacy}
+                          className="flex-1 btn-primary"
+                        >
+                          {isProcessingLegacy ? 'Assigning...' : 'Assign Data'}
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="p-2 bg-red-100 rounded-full">
+                          <AlertCircleIcon className="w-6 h-6 text-red-600" />
+                        </div>
+                        <h3 className="text-lg font-semibold text-slate-900">Clear Legacy Data</h3>
+                      </div>
+                      <p className="text-slate-600 mb-2">
+                        This will permanently delete all data that was created before multi-location support:
+                      </p>
+                      <ul className="text-sm text-slate-500 mb-4 ml-4 list-disc space-y-1">
+                        <li>Temperature logs, Checklists, Cleaning records</li>
+                        <li>Suppliers, Dishes, Waste &amp; Maintenance logs</li>
+                        <li>Diary entries, Reviews, Alerts, Appliances</li>
+                      </ul>
+                      <p className="text-red-600 text-sm font-medium mb-4">
+                        This action cannot be undone!
+                      </p>
+                      <div className="flex gap-3">
+                        <button
+                          onClick={() => setShowLegacyDataModal(null)}
+                          disabled={isProcessingLegacy}
+                          className="flex-1 btn-secondary"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={async () => {
+                            setIsProcessingLegacy(true)
+                            await clearLegacyData()
+                            setIsProcessingLegacy(false)
+                            setShowLegacyDataModal(null)
+                          }}
+                          disabled={isProcessingLegacy}
+                          className="flex-1 btn bg-red-600 hover:bg-red-700 text-white"
+                        >
+                          {isProcessingLegacy ? 'Clearing...' : 'Clear Legacy Data'}
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </>
           )}
 
           {/* Clear Location Data Confirmation Modal */}
