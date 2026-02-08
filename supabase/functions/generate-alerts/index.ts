@@ -6,6 +6,9 @@ const supabase = createClient(
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
 )
 
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || ''
+const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -20,7 +23,89 @@ interface AlertData {
   related_id?: string
 }
 
-async function createAlertIfNotExists(alert: AlertData) {
+interface UserInfo {
+  email: string
+  businessName?: string
+  hasEmailReminders: boolean
+}
+
+async function getUserInfo(userId: string): Promise<UserInfo | null> {
+  // Get user profile
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('email')
+    .eq('id', userId)
+    .single()
+
+  if (!profile) return null
+
+  // Get business name
+  const { data: business } = await supabase
+    .from('businesses')
+    .select('name')
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  // Check if user has email_reminders feature (professional or vip tier)
+  const { data: subscription } = await supabase
+    .from('subscriptions')
+    .select('tier, status')
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  const hasEmailReminders = subscription &&
+    ['professional', 'vip'].includes(subscription.tier) &&
+    ['active', 'trialing'].includes(subscription.status)
+
+  return {
+    email: profile.email,
+    businessName: business?.name,
+    hasEmailReminders: !!hasEmailReminders,
+  }
+}
+
+async function sendAlertEmail(alert: AlertData, userInfo: UserInfo) {
+  if (!userInfo.hasEmailReminders) {
+    console.log('User does not have email reminders feature, skipping email')
+    return
+  }
+
+  // Only send emails for high and critical alerts
+  if (!['high', 'critical'].includes(alert.severity)) {
+    console.log('Alert severity too low for email:', alert.severity)
+    return
+  }
+
+  try {
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/send-alert-email`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${SERVICE_ROLE_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        to: userInfo.email,
+        subject: `[${alert.severity.toUpperCase()}] ${alert.title}`,
+        alertType: alert.type,
+        severity: alert.severity,
+        title: alert.title,
+        message: alert.message,
+        businessName: userInfo.businessName,
+      }),
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      console.error('Failed to send alert email:', error)
+    } else {
+      console.log('Alert email sent successfully to:', userInfo.email)
+    }
+  } catch (error) {
+    console.error('Error sending alert email:', error)
+  }
+}
+
+async function createAlertIfNotExists(alert: AlertData, userInfo: UserInfo | null) {
   // Check if similar alert already exists (not acknowledged) in the last 24 hours
   const yesterday = new Date()
   yesterday.setHours(yesterday.getHours() - 24)
@@ -52,6 +137,12 @@ async function createAlertIfNotExists(alert: AlertData) {
   }
 
   console.log('Created alert:', data.id, alert.title)
+
+  // Send email notification for high/critical alerts
+  if (userInfo) {
+    await sendAlertEmail(alert, userInfo)
+  }
+
   return data
 }
 
@@ -294,6 +385,9 @@ serve(async (req) => {
     for (const profile of profiles) {
       console.log('Processing user:', profile.id)
 
+      // Get user info for email notifications
+      const userInfo = await getUserInfo(profile.id)
+
       // Gather all alerts for this user
       const [
         certAlerts,
@@ -319,9 +413,9 @@ serve(async (req) => {
 
       console.log(`Found ${allAlerts.length} potential alerts for user ${profile.id}`)
 
-      // Create alerts
+      // Create alerts and send emails
       for (const alert of allAlerts) {
-        const created = await createAlertIfNotExists(alert)
+        const created = await createAlertIfNotExists(alert, userInfo)
         if (created) totalAlertsCreated++
       }
     }
