@@ -22,6 +22,7 @@ import {
   Subscription,
   SubscriptionFeature,
   TIER_FEATURES,
+  Location,
 } from '../types'
 
 interface AppState {
@@ -36,6 +37,10 @@ interface AppState {
 
   // Subscription
   subscription: Subscription | null
+
+  // Locations (multi-location support)
+  locations: Location[]
+  activeLocationId: string | null
 
   // Data
   employees: Employee[]
@@ -147,6 +152,12 @@ interface AppContextType extends AppState {
   setActiveTab: (tab: string) => void
   toggleSidebar: () => void
 
+  // Location actions
+  addLocation: (location: Omit<Location, 'id'>) => Promise<void>
+  updateLocation: (id: string, data: Partial<Location>) => Promise<void>
+  deleteLocation: (id: string) => Promise<void>
+  setActiveLocation: (id: string) => void
+
   // Subscription actions
   hasFeature: (feature: SubscriptionFeature) => boolean
   isSubscriptionActive: () => boolean
@@ -177,6 +188,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     isLoading: true,
     business: null,
     subscription: null,
+    locations: [],
+    activeLocationId: null,
     employees: [],
     checklists: [],
     cleaningRecords: [],
@@ -427,6 +440,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         { data: weeklyExtraChecks },
         { data: fourWeeklyReviews },
         { data: subscriptionData },
+        { data: locationsData },
       ] = await Promise.all([
         supabase.from('employees').select('*, certificates(*), training_records(*)').eq('user_id', userId),
         supabase.from('appliances').select('*').eq('user_id', userId),
@@ -444,6 +458,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         supabase.from('weekly_extra_checks').select('*').eq('user_id', userId).order('week_commencing', { ascending: false }),
         supabase.from('four_weekly_reviews').select('*').eq('user_id', userId).order('review_date', { ascending: false }),
         supabase.from('subscriptions').select('*').eq('user_id', userId).maybeSingle(),
+        supabase.from('locations').select('*').eq('user_id', userId).order('is_primary', { ascending: false }),
       ])
 
       // Transform data from snake_case to camelCase
@@ -664,6 +679,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
         updatedAt: subscriptionData.updated_at,
       } : null
 
+      const transformedLocations: Location[] = (locationsData || []).map((l: any) => ({
+        id: l.id,
+        name: l.name,
+        address: l.address,
+        phone: l.phone,
+        email: l.email,
+        managerName: l.manager_name,
+        isPrimary: l.is_primary,
+      }))
+
+      // Set active location to primary or first location
+      const primaryLocation = transformedLocations.find(l => l.isPrimary) || transformedLocations[0]
+
       console.log('Setting state with profile:', profile?.email)
 
       setState(prev => ({
@@ -679,6 +707,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         isAuthenticated: !!profile,
         business: transformedBusiness,
         subscription: transformedSubscription,
+        locations: transformedLocations,
+        activeLocationId: primaryLocation?.id || null,
         employees: transformedEmployees,
         appliances: transformedAppliances,
         temperatureLogs: transformedTempLogs,
@@ -1659,6 +1689,75 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }))
   }
 
+  // Location actions
+  const addLocation = async (location: Omit<Location, 'id'>) => {
+    if (!state.supabaseUser) return
+    const { data } = await supabase
+      .from('locations')
+      .insert({
+        user_id: state.supabaseUser.id,
+        name: location.name,
+        address: location.address,
+        phone: location.phone,
+        email: location.email,
+        manager_name: location.managerName,
+        is_primary: location.isPrimary,
+      })
+      .select()
+      .single()
+
+    if (data) {
+      const newLocation: Location = {
+        id: data.id,
+        name: data.name,
+        address: data.address,
+        phone: data.phone,
+        email: data.email,
+        managerName: data.manager_name,
+        isPrimary: data.is_primary,
+      }
+      setState(prev => ({
+        ...prev,
+        locations: [...prev.locations, newLocation],
+        activeLocationId: prev.activeLocationId || newLocation.id,
+      }))
+    }
+  }
+
+  const updateLocation = async (id: string, data: Partial<Location>) => {
+    await supabase
+      .from('locations')
+      .update({
+        name: data.name,
+        address: data.address,
+        phone: data.phone,
+        email: data.email,
+        manager_name: data.managerName,
+        is_primary: data.isPrimary,
+      })
+      .eq('id', id)
+
+    setState(prev => ({
+      ...prev,
+      locations: prev.locations.map(l => l.id === id ? { ...l, ...data } : l),
+    }))
+  }
+
+  const deleteLocation = async (id: string) => {
+    await supabase.from('locations').delete().eq('id', id)
+    setState(prev => ({
+      ...prev,
+      locations: prev.locations.filter(l => l.id !== id),
+      activeLocationId: prev.activeLocationId === id
+        ? (prev.locations.find(l => l.id !== id)?.id || null)
+        : prev.activeLocationId,
+    }))
+  }
+
+  const setActiveLocation = (id: string) => {
+    setState(prev => ({ ...prev, activeLocationId: id }))
+  }
+
   // UI actions
   const setActiveTab = (tab: string) => {
     setState(prev => ({ ...prev, activeTab: tab }))
@@ -1820,6 +1919,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     getWeeklyExtraCheckByWeek,
     addFourWeeklyReview,
     updateFourWeeklyReview,
+    addLocation,
+    updateLocation,
+    deleteLocation,
+    setActiveLocation,
     setActiveTab,
     toggleSidebar,
     hasFeature,

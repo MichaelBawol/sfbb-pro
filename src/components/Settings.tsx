@@ -21,7 +21,7 @@ import {
   ExternalLinkIcon,
   AlertCircleIcon,
 } from 'lucide-react'
-import { Appliance, Employee, EmployeePrivilege, ROLE_PRIVILEGES, PRIVILEGE_LABELS, TIER_LABELS, TIER_PRICES } from '../types'
+import { Appliance, Employee, EmployeePrivilege, ROLE_PRIVILEGES, PRIVILEGE_LABELS, TIER_LABELS, TIER_PRICES, Location } from '../types'
 import PinEntry from './PinEntry'
 import ChecklistManager from './ChecklistManager'
 
@@ -49,9 +49,14 @@ export default function Settings() {
     getTrialDaysRemaining,
     createCheckoutSession,
     openCustomerPortal,
+    locations,
+    addLocation,
+    updateLocation,
+    deleteLocation,
+    hasFeature,
   } = useAppContext()
 
-  const [activeSection, setActiveSection] = useState<'business' | 'appliances' | 'employees' | 'checklists' | 'subscription' | 'security'>('business')
+  const [activeSection, setActiveSection] = useState<'business' | 'appliances' | 'employees' | 'checklists' | 'subscription' | 'locations' | 'security'>('business')
   const [showApplianceForm, setShowApplianceForm] = useState(false)
   const [editingAppliance, setEditingAppliance] = useState<Appliance | null>(null)
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null)
@@ -63,6 +68,16 @@ export default function Settings() {
   const [createPinError, setCreatePinError] = useState('')
   const [isLoadingCheckout, setIsLoadingCheckout] = useState(false)
   const [isLoadingPortal, setIsLoadingPortal] = useState(false)
+  const [showLocationForm, setShowLocationForm] = useState(false)
+  const [editingLocation, setEditingLocation] = useState<Location | null>(null)
+  const [locationForm, setLocationForm] = useState({
+    name: '',
+    address: '',
+    phone: '',
+    email: '',
+    managerName: '',
+    isPrimary: false,
+  })
 
   // Computed states - no useEffect needed
   const userHasPin = hasPin()
@@ -436,6 +451,19 @@ export default function Settings() {
           <CreditCardIcon className="w-4 h-4" />
           Subscription
         </button>
+        {hasFeature('multi_location') && (
+          <button
+            onClick={() => setActiveSection('locations')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              activeSection === 'locations'
+                ? 'bg-sfbb-100 text-sfbb-700'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <BuildingIcon className="w-4 h-4" />
+            Locations
+          </button>
+        )}
         <button
           onClick={() => setActiveSection('security')}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
@@ -935,6 +963,103 @@ export default function Settings() {
         </div>
       )}
 
+      {/* Locations Section (Professional/VIP only) */}
+      {activeSection === 'locations' && hasFeature('multi_location') && (
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <div>
+              <p className="text-slate-600">
+                Manage multiple business locations
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                setEditingLocation(null)
+                setLocationForm({
+                  name: '',
+                  address: '',
+                  phone: '',
+                  email: '',
+                  managerName: '',
+                  isPrimary: locations.length === 0,
+                })
+                setShowLocationForm(true)
+              }}
+              className="btn-primary flex items-center gap-2"
+            >
+              <PlusIcon className="w-4 h-4" />
+              Add Location
+            </button>
+          </div>
+
+          {locations.length === 0 ? (
+            <div className="card p-8 text-center">
+              <BuildingIcon className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-slate-900 mb-2">No locations configured</h3>
+              <p className="text-slate-500 mb-4">
+                Add your business locations to manage them separately
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {locations.map(location => (
+                <div key={location.id} className={`card p-4 ${location.isPrimary ? 'ring-2 ring-sfbb-500' : ''}`}>
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold text-slate-900">{location.name}</h3>
+                        {location.isPrimary && (
+                          <span className="badge badge-success text-xs">Primary</span>
+                        )}
+                      </div>
+                      {location.address && (
+                        <p className="text-sm text-slate-500 mt-1">{location.address}</p>
+                      )}
+                    </div>
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => {
+                          setEditingLocation(location)
+                          setLocationForm({
+                            name: location.name,
+                            address: location.address || '',
+                            phone: location.phone || '',
+                            email: location.email || '',
+                            managerName: location.managerName || '',
+                            isPrimary: location.isPrimary,
+                          })
+                          setShowLocationForm(true)
+                        }}
+                        className="p-1.5 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-600"
+                      >
+                        <EditIcon className="w-4 h-4" />
+                      </button>
+                      {!location.isPrimary && (
+                        <button
+                          onClick={() => {
+                            if (confirm('Are you sure you want to delete this location?')) {
+                              deleteLocation(location.id)
+                            }
+                          }}
+                          className="p-1.5 rounded hover:bg-slate-100 text-slate-400 hover:text-red-600"
+                        >
+                          <TrashIcon className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="space-y-1 text-sm text-slate-600">
+                    {location.phone && <p>Phone: {location.phone}</p>}
+                    {location.email && <p>Email: {location.email}</p>}
+                    {location.managerName && <p>Manager: {location.managerName}</p>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Security Section */}
       {activeSection === 'security' && (
         <div className="space-y-6">
@@ -1179,6 +1304,126 @@ export default function Settings() {
                 </button>
                 <button type="submit" className="btn-primary flex-1">
                   {editingAppliance ? 'Update' : 'Add'} Appliance
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add/Edit Location Modal */}
+      {showLocationForm && (
+        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
+            <div className="flex items-center justify-between p-4 border-b border-slate-200">
+              <h2 className="text-lg font-semibold text-slate-900">
+                {editingLocation ? 'Edit Location' : 'Add Location'}
+              </h2>
+              <button
+                onClick={() => {
+                  setShowLocationForm(false)
+                  setEditingLocation(null)
+                }}
+                className="p-1.5 rounded hover:bg-slate-100 text-slate-400"
+              >
+                <XIcon className="w-5 h-5" />
+              </button>
+            </div>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                if (editingLocation) {
+                  updateLocation(editingLocation.id, locationForm)
+                } else {
+                  addLocation(locationForm)
+                }
+                setShowLocationForm(false)
+                setEditingLocation(null)
+              }}
+              className="p-4 space-y-4"
+            >
+              <div>
+                <label className="label">Location Name *</label>
+                <input
+                  type="text"
+                  value={locationForm.name}
+                  onChange={e => setLocationForm({ ...locationForm, name: e.target.value })}
+                  className="input"
+                  placeholder="Main Branch, City Centre, etc."
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="label">Address</label>
+                <input
+                  type="text"
+                  value={locationForm.address}
+                  onChange={e => setLocationForm({ ...locationForm, address: e.target.value })}
+                  className="input"
+                  placeholder="123 High Street, London, EC1A 1BB"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="label">Phone</label>
+                  <input
+                    type="tel"
+                    value={locationForm.phone}
+                    onChange={e => setLocationForm({ ...locationForm, phone: e.target.value })}
+                    className="input"
+                    placeholder="020 1234 5678"
+                  />
+                </div>
+                <div>
+                  <label className="label">Email</label>
+                  <input
+                    type="email"
+                    value={locationForm.email}
+                    onChange={e => setLocationForm({ ...locationForm, email: e.target.value })}
+                    className="input"
+                    placeholder="location@business.com"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="label">Manager Name</label>
+                <input
+                  type="text"
+                  value={locationForm.managerName}
+                  onChange={e => setLocationForm({ ...locationForm, managerName: e.target.value })}
+                  className="input"
+                  placeholder="John Smith"
+                />
+              </div>
+
+              {!editingLocation?.isPrimary && (
+                <label className="flex items-center gap-2 p-3 bg-slate-50 rounded-lg cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={locationForm.isPrimary}
+                    onChange={e => setLocationForm({ ...locationForm, isPrimary: e.target.checked })}
+                    className="rounded border-slate-300 text-sfbb-600 focus:ring-sfbb-500"
+                  />
+                  <span className="text-sm text-slate-700">Set as primary location</span>
+                </label>
+              )}
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowLocationForm(false)
+                    setEditingLocation(null)
+                  }}
+                  className="btn-secondary flex-1"
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="btn-primary flex-1">
+                  {editingLocation ? 'Update' : 'Add'} Location
                 </button>
               </div>
             </form>

@@ -79,6 +79,16 @@ export interface Business {
   lastInspectionDate?: string
 }
 
+export interface Location {
+  id: string
+  name: string
+  address?: string
+  phone?: string
+  email?: string
+  managerName?: string
+  isPrimary: boolean
+}
+
 export interface Employee {
   id: string
   name: string
