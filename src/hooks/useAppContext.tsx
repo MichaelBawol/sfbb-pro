@@ -679,6 +679,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         updatedAt: subscriptionData.updated_at,
       } : null
 
+      console.log('Raw locations data:', locationsData)
+
       const transformedLocations: Location[] = (locationsData || []).map((l: any) => ({
         id: l.id,
         name: l.name,
@@ -689,9 +691,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
         isPrimary: l.is_primary,
       }))
 
+      console.log('Transformed locations:', transformedLocations)
+
       // Set active location to primary or first location
       const primaryLocation = transformedLocations.find(l => l.isPrimary) || transformedLocations[0]
 
+      console.log('Primary location:', primaryLocation)
       console.log('Setting state with profile:', profile?.email)
 
       setState(prev => ({

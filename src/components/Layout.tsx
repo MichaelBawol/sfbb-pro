@@ -24,6 +24,8 @@ import {
   Thermometer,
   Clock,
   Search,
+  ChevronDownIcon,
+  MapPinIcon,
 } from 'lucide-react'
 
 // Main bottom nav items (max 5 for mobile)
@@ -55,8 +57,15 @@ interface LayoutProps {
 
 export default function Layout({ children }: LayoutProps) {
   const location = useLocation()
-  const { business, alerts, sidebarOpen, toggleSidebar, acknowledgeAlert, dismissAlert } = useAppContext()
+  const { business, alerts, sidebarOpen, toggleSidebar, acknowledgeAlert, dismissAlert, locations, activeLocationId, setActiveLocation } = useAppContext()
   const [showAlerts, setShowAlerts] = useState(false)
+  const [showLocationPicker, setShowLocationPicker] = useState(false)
+
+  // Get active location details
+  const activeLocation = locations.find(l => l.id === activeLocationId)
+  // Show location indicator if user has locations - picker dropdown only if more than 1
+  const hasLocations = locations.length >= 1
+  const canSwitchLocations = locations.length > 1
   const unacknowledgedAlerts = alerts.filter(a => !a.acknowledged)
   const unacknowledgedCount = unacknowledgedAlerts.length
 
@@ -102,16 +111,36 @@ export default function Layout({ children }: LayoutProps) {
             </div>
           </div>
 
-          {/* Center - Business Name */}
-          <div className="flex-1 text-center px-4">
+          {/* Center - Business Name & Location */}
+          <div className="flex-1 text-center px-4 relative">
             {business?.name ? (
-              <h1 className="text-white font-bold text-lg truncate animate-fade-in">
-                {business.name}
-              </h1>
+              hasLocations && activeLocation ? (
+                canSwitchLocations ? (
+                  <button
+                    onClick={() => setShowLocationPicker(!showLocationPicker)}
+                    className="inline-flex items-center gap-1 text-white font-bold text-lg animate-fade-in hover:bg-white/10 rounded-lg px-2 py-1 transition-colors"
+                  >
+                    <span className="truncate max-w-[120px]">{business.name}</span>
+                    <span className="text-white/60 mx-1">›</span>
+                    <span className="truncate max-w-[80px] text-white/90">{activeLocation.name}</span>
+                    <ChevronDownIcon className="w-4 h-4 text-white/70 flex-shrink-0" />
+                  </button>
+                ) : (
+                  <div className="inline-flex items-center gap-1 text-white font-bold text-lg animate-fade-in">
+                    <span className="truncate max-w-[120px]">{business.name}</span>
+                    <span className="text-white/60 mx-1">›</span>
+                    <span className="truncate max-w-[80px] text-white/90">{activeLocation.name}</span>
+                  </div>
+                )
+              ) : (
+                <h1 className="text-white font-bold text-lg truncate animate-fade-in">
+                  {business.name}
+                </h1>
+              )
             ) : (
               <h1 className="text-white font-bold text-lg">SFBB Pro</h1>
             )}
-            {business?.foodHygieneRating !== undefined && (
+            {business?.foodHygieneRating !== undefined && !hasLocations && (
               <div className="inline-flex items-center gap-1 mt-1 px-2.5 py-0.5 bg-white/20 backdrop-blur-sm rounded-full">
                 <span className="text-white/90 text-xs font-semibold">
                   Rating: {business.foodHygieneRating}/5
@@ -137,6 +166,75 @@ export default function Layout({ children }: LayoutProps) {
           </div>
         </div>
       </header>
+
+      {/* Location Picker Dropdown */}
+      {showLocationPicker && canSwitchLocations && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/50 z-50"
+            onClick={() => setShowLocationPicker(false)}
+          />
+
+          {/* Dropdown */}
+          <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-white rounded-2xl shadow-2xl w-72 overflow-hidden animate-slide-down">
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-slate-50">
+              <h2 className="text-base font-bold text-slate-900">Switch Location</h2>
+              <button
+                onClick={() => setShowLocationPicker(false)}
+                className="p-1.5 rounded-full hover:bg-slate-200 active:bg-slate-300"
+              >
+                <XIcon className="w-4 h-4 text-slate-500" />
+              </button>
+            </div>
+
+            {/* Locations List */}
+            <div className="max-h-64 overflow-y-auto">
+              {locations.map(loc => (
+                <button
+                  key={loc.id}
+                  onClick={() => {
+                    setActiveLocation(loc.id)
+                    setShowLocationPicker(false)
+                  }}
+                  className={`w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-slate-50 active:bg-slate-100 transition-colors ${
+                    loc.id === activeLocationId ? 'bg-sfbb-50' : ''
+                  }`}
+                >
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                    loc.id === activeLocationId ? 'bg-sfbb-100' : 'bg-slate-100'
+                  }`}>
+                    <MapPinIcon className={`w-5 h-5 ${
+                      loc.id === activeLocationId ? 'text-sfbb-600' : 'text-slate-500'
+                    }`} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className={`font-medium truncate ${
+                        loc.id === activeLocationId ? 'text-sfbb-700' : 'text-slate-900'
+                      }`}>
+                        {loc.name}
+                      </span>
+                      {loc.isPrimary && (
+                        <span className="text-[10px] px-1.5 py-0.5 bg-sfbb-100 text-sfbb-600 rounded font-medium">
+                          Primary
+                        </span>
+                      )}
+                    </div>
+                    {loc.address && (
+                      <p className="text-xs text-slate-500 truncate">{loc.address}</p>
+                    )}
+                  </div>
+                  {loc.id === activeLocationId && (
+                    <CheckIcon className="w-5 h-5 text-sfbb-600 flex-shrink-0" />
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Alerts Panel */}
       {showAlerts && (
