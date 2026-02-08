@@ -157,6 +157,7 @@ interface AppContextType extends AppState {
   updateLocation: (id: string, data: Partial<Location>) => Promise<void>
   deleteLocation: (id: string) => Promise<void>
   setActiveLocation: (id: string) => void
+  clearLocationData: (locationId: string) => Promise<void>
 
   // Subscription actions
   hasFeature: (feature: SubscriptionFeature) => boolean
@@ -1784,6 +1785,54 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setState(prev => ({ ...prev, activeLocationId: id }))
   }
 
+  // Clear all data for a specific location
+  const clearLocationData = async (locationId: string) => {
+    if (!state.supabaseUser) return
+
+    // Delete all location-specific data from database
+    const tables = [
+      'temperature_logs',
+      'checklists',
+      'cleaning_records',
+      'suppliers',
+      'dishes',
+      'waste_logs',
+      'maintenance_logs',
+      'spot_checks',
+      'alerts',
+      'appliances',
+      'diary_entries',
+      'weekly_extra_checks',
+      'four_weekly_reviews',
+    ]
+
+    for (const table of tables) {
+      await supabase
+        .from(table)
+        .delete()
+        .eq('user_id', state.supabaseUser.id)
+        .eq('location_id', locationId)
+    }
+
+    // Update local state to remove the deleted records
+    setState(prev => ({
+      ...prev,
+      temperatureLogs: prev.temperatureLogs.filter((r: any) => r.locationId !== locationId),
+      checklists: prev.checklists.filter((r: any) => r.locationId !== locationId),
+      cleaningRecords: prev.cleaningRecords.filter((r: any) => r.locationId !== locationId),
+      suppliers: prev.suppliers.filter((r: any) => r.locationId !== locationId),
+      dishes: prev.dishes.filter((r: any) => r.locationId !== locationId),
+      wasteLogs: prev.wasteLogs.filter((r: any) => r.locationId !== locationId),
+      maintenanceLogs: prev.maintenanceLogs.filter((r: any) => r.locationId !== locationId),
+      spotChecks: prev.spotChecks.filter((r: any) => r.locationId !== locationId),
+      alerts: prev.alerts.filter((r: any) => r.locationId !== locationId),
+      appliances: prev.appliances.filter((r: any) => r.locationId !== locationId),
+      diaryEntries: prev.diaryEntries.filter((r: any) => r.locationId !== locationId),
+      weeklyExtraChecks: prev.weeklyExtraChecks.filter((r: any) => r.locationId !== locationId),
+      fourWeeklyReviews: prev.fourWeeklyReviews.filter((r: any) => r.locationId !== locationId),
+    }))
+  }
+
   // UI actions
   const setActiveTab = (tab: string) => {
     setState(prev => ({ ...prev, activeTab: tab }))
@@ -1984,6 +2033,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     updateLocation,
     deleteLocation,
     setActiveLocation,
+    clearLocationData,
     setActiveTab,
     toggleSidebar,
     hasFeature,

@@ -53,6 +53,7 @@ export default function Settings() {
     addLocation,
     updateLocation,
     deleteLocation,
+    clearLocationData,
     hasFeature,
   } = useAppContext()
 
@@ -78,6 +79,8 @@ export default function Settings() {
     managerName: '',
     isPrimary: false,
   })
+  const [clearingLocationId, setClearingLocationId] = useState<string | null>(null)
+  const [isClearingData, setIsClearingData] = useState(false)
 
   // Computed states - no useEffect needed
   const userHasPin = hasPin()
@@ -1053,9 +1056,71 @@ export default function Settings() {
                     {location.email && <p>Email: {location.email}</p>}
                     {location.managerName && <p>Manager: {location.managerName}</p>}
                   </div>
+                  <div className="mt-3 pt-3 border-t border-slate-100">
+                    <button
+                      onClick={() => setClearingLocationId(location.id)}
+                      className="text-xs text-red-500 hover:text-red-700 font-medium"
+                    >
+                      Clear all data for this location
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
+          )}
+
+          {/* Clear Location Data Confirmation Modal */}
+          {clearingLocationId && (
+            <>
+              <div className="fixed inset-0 bg-black/50 z-50" onClick={() => !isClearingData && setClearingLocationId(null)} />
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="p-2 bg-red-100 rounded-full">
+                      <AlertCircleIcon className="w-6 h-6 text-red-600" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-slate-900">Clear Location Data</h3>
+                  </div>
+                  <p className="text-slate-600 mb-2">
+                    This will permanently delete all data for <strong>{locations.find(l => l.id === clearingLocationId)?.name}</strong>:
+                  </p>
+                  <ul className="text-sm text-slate-500 mb-4 ml-4 list-disc space-y-1">
+                    <li>Temperature logs</li>
+                    <li>Checklists</li>
+                    <li>Cleaning records</li>
+                    <li>Suppliers &amp; Dishes</li>
+                    <li>Waste &amp; Maintenance logs</li>
+                    <li>Diary entries &amp; Reviews</li>
+                    <li>Alerts &amp; Appliances</li>
+                  </ul>
+                  <p className="text-red-600 text-sm font-medium mb-4">
+                    This action cannot be undone!
+                  </p>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setClearingLocationId(null)}
+                      disabled={isClearingData}
+                      className="flex-1 btn-secondary"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={async () => {
+                        if (!clearingLocationId) return
+                        setIsClearingData(true)
+                        await clearLocationData(clearingLocationId)
+                        setIsClearingData(false)
+                        setClearingLocationId(null)
+                      }}
+                      disabled={isClearingData}
+                      className="flex-1 btn bg-red-600 hover:bg-red-700 text-white"
+                    >
+                      {isClearingData ? 'Clearing...' : 'Clear All Data'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </>
           )}
         </div>
       )}
