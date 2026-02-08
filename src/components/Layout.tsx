@@ -1,4 +1,4 @@
-import { ReactNode } from 'react'
+import { ReactNode, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAppContext } from '../hooks/useAppContext'
 import {
@@ -19,6 +19,11 @@ import {
   BookOpenIcon,
   CalendarDaysIcon,
   ClockIcon,
+  CheckIcon,
+  FileWarning,
+  Thermometer,
+  Clock,
+  Search,
 } from 'lucide-react'
 
 // Main bottom nav items (max 5 for mobile)
@@ -50,10 +55,40 @@ interface LayoutProps {
 
 export default function Layout({ children }: LayoutProps) {
   const location = useLocation()
-  const { business, alerts, sidebarOpen, toggleSidebar } = useAppContext()
-  const unacknowledgedAlerts = alerts.filter(a => !a.acknowledged).length
+  const { business, alerts, sidebarOpen, toggleSidebar, acknowledgeAlert, dismissAlert } = useAppContext()
+  const [showAlerts, setShowAlerts] = useState(false)
+  const unacknowledgedAlerts = alerts.filter(a => !a.acknowledged)
+  const unacknowledgedCount = unacknowledgedAlerts.length
 
   const isMoreMenuOpen = sidebarOpen
+
+  const getAlertIcon = (type: string) => {
+    switch (type) {
+      case 'certificate_expiry': return FileWarning
+      case 'temperature': return Thermometer
+      case 'overdue_task': return Clock
+      case 'inspection': return Search
+      default: return AlertTriangleIcon
+    }
+  }
+
+  const getSeverityColor = (severity: string) => {
+    switch (severity) {
+      case 'critical': return 'bg-red-100 text-red-700 border-red-200'
+      case 'high': return 'bg-orange-100 text-orange-700 border-orange-200'
+      case 'medium': return 'bg-yellow-100 text-yellow-700 border-yellow-200'
+      default: return 'bg-blue-100 text-blue-700 border-blue-200'
+    }
+  }
+
+  const getSeverityBadge = (severity: string) => {
+    switch (severity) {
+      case 'critical': return 'bg-red-500'
+      case 'high': return 'bg-orange-500'
+      case 'medium': return 'bg-yellow-500'
+      default: return 'bg-blue-500'
+    }
+  }
 
   return (
     <div className="min-h-screen bg-slate-100 pb-20">
@@ -88,17 +123,116 @@ export default function Layout({ children }: LayoutProps) {
           {/* Right side actions */}
           <div className="flex items-center">
             {/* Notifications */}
-            <button className="relative p-3 rounded-2xl bg-white/10 hover:bg-white/20 active:bg-white/30 transition-all duration-200">
+            <button
+              onClick={() => setShowAlerts(!showAlerts)}
+              className="relative p-3 rounded-2xl bg-white/10 hover:bg-white/20 active:bg-white/30 transition-all duration-200"
+            >
               <BellIcon className="w-6 h-6 text-white" />
-              {unacknowledgedAlerts > 0 && (
+              {unacknowledgedCount > 0 && (
                 <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center font-bold animate-bounce shadow-lg">
-                  {unacknowledgedAlerts}
+                  {unacknowledgedCount}
                 </span>
               )}
             </button>
           </div>
         </div>
       </header>
+
+      {/* Alerts Panel */}
+      {showAlerts && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/50 z-50"
+            onClick={() => setShowAlerts(false)}
+          />
+
+          {/* Alerts Dropdown */}
+          <div className="fixed top-20 right-2 left-2 md:left-auto md:right-4 md:w-96 z-50 bg-white rounded-2xl shadow-2xl max-h-[70vh] overflow-hidden animate-slide-down">
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-slate-50">
+              <h2 className="text-lg font-bold text-slate-900">Alerts</h2>
+              <button
+                onClick={() => setShowAlerts(false)}
+                className="p-2 rounded-full hover:bg-slate-200 active:bg-slate-300"
+              >
+                <XIcon className="w-5 h-5 text-slate-500" />
+              </button>
+            </div>
+
+            {/* Alerts List */}
+            <div className="overflow-y-auto max-h-[calc(70vh-60px)]">
+              {alerts.length === 0 ? (
+                <div className="p-8 text-center">
+                  <BellIcon className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                  <p className="text-slate-500">No alerts</p>
+                  <p className="text-slate-400 text-sm">You're all caught up!</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-slate-100">
+                  {alerts.slice(0, 20).map(alert => {
+                    const AlertIcon = getAlertIcon(alert.type)
+                    return (
+                      <div
+                        key={alert.id}
+                        className={`p-4 ${alert.acknowledged ? 'bg-slate-50 opacity-60' : 'bg-white'}`}
+                      >
+                        <div className="flex gap-3">
+                          <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${getSeverityColor(alert.severity)}`}>
+                            <AlertIcon className="w-5 h-5" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between gap-2">
+                              <div>
+                                <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold text-white mb-1 ${getSeverityBadge(alert.severity)}`}>
+                                  {alert.severity.toUpperCase()}
+                                </span>
+                                <h3 className="font-semibold text-slate-900 text-sm">
+                                  {alert.title}
+                                </h3>
+                              </div>
+                            </div>
+                            <p className="text-slate-600 text-xs mt-1 line-clamp-2">
+                              {alert.message}
+                            </p>
+                            <div className="flex items-center justify-between mt-2">
+                              <span className="text-slate-400 text-[10px]">
+                                {new Date(alert.date).toLocaleDateString('en-GB', {
+                                  day: 'numeric',
+                                  month: 'short',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </span>
+                              {!alert.acknowledged && (
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() => acknowledgeAlert(alert.id)}
+                                    className="text-xs text-sfbb-600 font-medium hover:text-sfbb-700 flex items-center gap-1"
+                                  >
+                                    <CheckIcon className="w-3 h-3" />
+                                    Acknowledge
+                                  </button>
+                                  <button
+                                    onClick={() => dismissAlert(alert.id)}
+                                    className="text-xs text-slate-400 font-medium hover:text-slate-600"
+                                  >
+                                    Dismiss
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Main Content */}
       <main className="p-4">{children}</main>
@@ -204,6 +338,19 @@ export default function Layout({ children }: LayoutProps) {
         }
         .animate-slide-up {
           animation: slide-up 0.3s ease-out;
+        }
+        @keyframes slide-down {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .animate-slide-down {
+          animation: slide-down 0.2s ease-out;
         }
         .safe-area-bottom {
           padding-bottom: env(safe-area-inset-bottom);
