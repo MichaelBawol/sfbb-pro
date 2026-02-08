@@ -118,18 +118,18 @@ export default function Layout({ children }: LayoutProps) {
                 canSwitchLocations ? (
                   <button
                     onClick={() => setShowLocationPicker(!showLocationPicker)}
-                    className="inline-flex items-center gap-1 text-white font-bold text-lg animate-fade-in hover:bg-white/10 rounded-lg px-2 py-1 transition-colors"
+                    className="inline-flex items-center gap-1 text-white font-bold text-lg animate-fade-in hover:bg-white/10 rounded-lg px-2 py-1 transition-colors max-w-full"
                   >
-                    <span className="truncate max-w-[200px]">{business.name}</span>
-                    <span className="text-white/60 mx-1">›</span>
-                    <span className="truncate max-w-[140px] text-white/90">{activeLocation.name}</span>
+                    <span className="truncate">{business.name}</span>
+                    <span className="text-white/60 mx-1 flex-shrink-0">›</span>
+                    <span className="truncate text-white/90">{activeLocation.name}</span>
                     <ChevronDownIcon className="w-4 h-4 text-white/70 flex-shrink-0" />
                   </button>
                 ) : (
-                  <div className="inline-flex items-center gap-1 text-white font-bold text-lg animate-fade-in">
-                    <span className="truncate max-w-[200px]">{business.name}</span>
-                    <span className="text-white/60 mx-1">›</span>
-                    <span className="truncate max-w-[140px] text-white/90">{activeLocation.name}</span>
+                  <div className="inline-flex items-center gap-1 text-white font-bold text-lg animate-fade-in max-w-full">
+                    <span className="truncate">{business.name}</span>
+                    <span className="text-white/60 mx-1 flex-shrink-0">›</span>
+                    <span className="truncate text-white/90">{activeLocation.name}</span>
                   </div>
                 )
               ) : (
