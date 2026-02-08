@@ -843,8 +843,8 @@ export default function Settings() {
             )}
           </div>
 
-          {/* Upgrade Options */}
-          {(!subscription || !isSubscriptionActive() || subscription.tier !== 'professional') && (
+          {/* Upgrade Options - hidden for VIP and Professional users */}
+          {(!subscription || !isSubscriptionActive() || (subscription.tier !== 'professional' && subscription.tier !== 'vip')) && (
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-slate-900">
                 {!subscription || !isSubscriptionActive() ? 'Choose a Plan' : 'Upgrade Your Plan'}
@@ -928,7 +928,7 @@ export default function Settings() {
               </div>
 
               <p className="text-center text-sm text-slate-500">
-                All plans include a 14-day free trial. No credit card required to start.
+                All plans include a 14-day free trial. Cancel anytime before your trial ends.
               </p>
             </div>
           )}

@@ -346,7 +346,8 @@ export const TEMP_THRESHOLDS = {
 }
 
 // Subscription types
-export type SubscriptionTier = 'free' | 'starter' | 'professional'
+// Note: 'vip' is a hidden tier for internal use - grants full access without payment
+export type SubscriptionTier = 'free' | 'starter' | 'professional' | 'vip'
 
 export type SubscriptionStatus =
   | 'incomplete'
@@ -423,15 +424,30 @@ export const TIER_FEATURES: Record<SubscriptionTier, SubscriptionFeature[]> = {
     'priority_support',
     'advanced_reporting',
   ],
+  vip: [
+    'temperature_logging',
+    'daily_checklists',
+    'cleaning_schedules',
+    'sfbb_diary',
+    'staff_management',
+    'allergen_tracking',
+    'single_location',
+    'pdf_export',
+    'email_reminders',
+    'multi_location',
+    'priority_support',
+    'advanced_reporting',
+  ],
 }
 
 export const TIER_LABELS: Record<SubscriptionTier, string> = {
   free: 'Free',
   starter: 'Starter',
   professional: 'Professional',
+  vip: 'VIP',
 }
 
-export const TIER_PRICES: Record<Exclude<SubscriptionTier, 'free'>, string> = {
+export const TIER_PRICES: Record<Exclude<SubscriptionTier, 'free' | 'vip'>, string> = {
   starter: '15.00',
   professional: '30.00',
 }

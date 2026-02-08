@@ -1,0 +1,24 @@
+{
+  "rewrites": [
+    {
+      "source": "/(.*\\.png)",
+      "destination": "/$1"
+    },
+    {
+      "source": "/(.*\\.ico)",
+      "destination": "/$1"
+    },
+    {
+      "source": "/(.*\\.svg)",
+      "destination": "/$1"
+    },
+    {
+      "source": "/(.*\\.webmanifest)",
+      "destination": "/$1"
+    },
+    {
+      "source": "/((?!assets/).*)",
+      "destination": "/index.html"
+    }
+  ]
+}

@@ -543,7 +543,7 @@ CREATE TABLE IF NOT EXISTS subscriptions (
   stripe_customer_id TEXT NOT NULL,
   stripe_subscription_id TEXT UNIQUE,
   stripe_price_id TEXT,
-  tier TEXT NOT NULL DEFAULT 'free' CHECK (tier IN ('free', 'starter', 'professional')),
+  tier TEXT NOT NULL DEFAULT 'free' CHECK (tier IN ('free', 'starter', 'professional', 'vip')),
   status TEXT NOT NULL DEFAULT 'incomplete',
   trial_start TIMESTAMPTZ,
   trial_end TIMESTAMPTZ,

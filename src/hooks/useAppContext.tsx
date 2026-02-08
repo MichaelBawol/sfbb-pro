@@ -197,6 +197,178 @@ export function AppProvider({ children }: { children: ReactNode }) {
     settingsUnlocked: false,
   })
 
+  // Generate alerts based on current data
+  const generateLocalAlerts = useCallback(async (userId: string, data: {
+    employees: Employee[]
+    checklists: Checklist[]
+    cleaningRecords: CleaningRecord[]
+    temperatureLogs: TemperatureLog[]
+    appliances: Appliance[]
+  }) => {
+    const newAlerts: Omit<Alert, 'id'>[] = []
+    const now = new Date()
+    const today = now.toISOString().split('T')[0]
+    const currentHour = now.getHours()
+
+    // Check for expiring certificates
+    const thirtyDaysFromNow = new Date()
+    thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30)
+
+    for (const employee of data.employees) {
+      for (const cert of employee.certificates || []) {
+        if (!cert.expiryDate) continue
+        const expiryDate = new Date(cert.expiryDate)
+        if (expiryDate <= thirtyDaysFromNow) {
+          const daysUntilExpiry = Math.ceil((expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+          let severity: 'low' | 'medium' | 'high' | 'critical' = 'low'
+          if (daysUntilExpiry <= 0) severity = 'critical'
+          else if (daysUntilExpiry <= 7) severity = 'high'
+          else if (daysUntilExpiry <= 14) severity = 'medium'
+
+          newAlerts.push({
+            type: 'certificate_expiry',
+            severity,
+            title: daysUntilExpiry <= 0
+              ? `${cert.name} certificate expired`
+              : `${cert.name} expiring soon`,
+            message: daysUntilExpiry <= 0
+              ? `${employee.name}'s ${cert.name} certificate expired on ${cert.expiryDate}. Please renew immediately.`
+              : `${employee.name}'s ${cert.name} certificate expires in ${daysUntilExpiry} days.`,
+            date: now.toISOString(),
+            acknowledged: false,
+            relatedId: cert.id,
+          })
+        }
+      }
+    }
+
+    // Check for missing opening checklist (after 11 AM)
+    if (currentHour >= 11) {
+      const openingToday = data.checklists.find(
+        c => c.type === 'opening' && c.date === today && c.signedOff
+      )
+      if (!openingToday) {
+        newAlerts.push({
+          type: 'overdue_task',
+          severity: 'high',
+          title: 'Opening checklist not completed',
+          message: `The opening checklist for today has not been signed off. Please complete it as soon as possible.`,
+          date: now.toISOString(),
+          acknowledged: false,
+        })
+      }
+    }
+
+    // Check for missing closing checklist from yesterday (after 9 AM)
+    if (currentHour >= 9) {
+      const yesterday = new Date(now)
+      yesterday.setDate(yesterday.getDate() - 1)
+      const yesterdayStr = yesterday.toISOString().split('T')[0]
+      const closingYesterday = data.checklists.find(
+        c => c.type === 'closing' && c.date === yesterdayStr && c.signedOff
+      )
+      if (!closingYesterday) {
+        newAlerts.push({
+          type: 'overdue_task',
+          severity: 'medium',
+          title: 'Closing checklist not completed',
+          message: `Yesterday's closing checklist was not signed off. Please review and complete it.`,
+          date: now.toISOString(),
+          acknowledged: false,
+        })
+      }
+    }
+
+    // Check for missing daily cleaning (after 6 PM)
+    if (currentHour >= 18) {
+      const dailyCleaningToday = data.cleaningRecords.find(
+        c => c.frequency === 'daily' && c.date === today && c.signedOff
+      )
+      if (!dailyCleaningToday) {
+        newAlerts.push({
+          type: 'overdue_task',
+          severity: 'medium',
+          title: 'Daily cleaning not completed',
+          message: `The daily cleaning tasks for today have not been signed off.`,
+          date: now.toISOString(),
+          acknowledged: false,
+        })
+      }
+    }
+
+    // Check for non-compliant temperature logs today
+    const nonCompliantLogs = data.temperatureLogs.filter(
+      t => t.date === today && !t.isCompliant
+    )
+    for (const log of nonCompliantLogs) {
+      newAlerts.push({
+        type: 'temperature',
+        severity: 'critical',
+        title: `Temperature out of range: ${log.applianceName}`,
+        message: `${log.applianceName} recorded ${log.temperature}°C at ${log.time}. This is outside the safe range.`,
+        date: now.toISOString(),
+        acknowledged: false,
+        relatedId: log.id,
+      })
+    }
+
+    // Check for missing temperature logs (after 2 PM)
+    if (currentHour >= 14) {
+      const tempApplianceTypes = ['fridge', 'freezer', 'hot_hold']
+      for (const appliance of data.appliances.filter(a => tempApplianceTypes.includes(a.type))) {
+        const hasLog = data.temperatureLogs.some(
+          t => t.applianceId === appliance.id && t.date === today
+        )
+        if (!hasLog) {
+          newAlerts.push({
+            type: 'overdue_task',
+            severity: 'high',
+            title: `No temperature log for ${appliance.name}`,
+            message: `No temperature has been recorded for ${appliance.name} today. Temperature checks should be done at least twice daily.`,
+            date: now.toISOString(),
+            acknowledged: false,
+            relatedId: appliance.id,
+          })
+        }
+      }
+    }
+
+    // Insert new alerts that don't already exist
+    if (newAlerts.length > 0) {
+      // Get existing unacknowledged alerts
+      const { data: existingAlerts } = await supabase
+        .from('alerts')
+        .select('title')
+        .eq('user_id', userId)
+        .eq('acknowledged', false)
+
+      const existingTitles = new Set(existingAlerts?.map(a => a.title) || [])
+
+      // Filter out duplicates
+      const uniqueAlerts = newAlerts.filter(a => !existingTitles.has(a.title))
+
+      if (uniqueAlerts.length > 0) {
+        const { error } = await supabase
+          .from('alerts')
+          .insert(uniqueAlerts.map(a => ({
+            user_id: userId,
+            type: a.type,
+            severity: a.severity,
+            title: a.title,
+            message: a.message,
+            acknowledged: false,
+            related_id: a.relatedId,
+          })))
+
+        if (error) {
+          console.error('Error creating alerts:', error)
+        } else {
+          console.log(`Created ${uniqueAlerts.length} new alerts`)
+        }
+      }
+    }
+  }, [])
+
   // Fetch all user data from Supabase
   const fetchUserData = useCallback(async (userId: string) => {
     try {
@@ -524,11 +696,43 @@ export function AppProvider({ children }: { children: ReactNode }) {
         fourWeeklyReviews: transformedFourWeeklyReviews,
         isLoading: false,
       }))
+
+      // Generate local alerts based on fetched data
+      await generateLocalAlerts(userId, {
+        employees: transformedEmployees,
+        checklists: transformedChecklists,
+        cleaningRecords: transformedCleaningRecords,
+        temperatureLogs: transformedTempLogs,
+        appliances: transformedAppliances,
+      })
+
+      // Refresh alerts after generating new ones
+      const { data: updatedAlerts } = await supabase
+        .from('alerts')
+        .select('*')
+        .eq('user_id', userId)
+        .order('date', { ascending: false })
+
+      if (updatedAlerts) {
+        setState(prev => ({
+          ...prev,
+          alerts: updatedAlerts.map((a: any) => ({
+            id: a.id,
+            type: a.type,
+            severity: a.severity,
+            title: a.title,
+            message: a.message,
+            date: a.date,
+            acknowledged: a.acknowledged,
+            relatedId: a.related_id,
+          })),
+        }))
+      }
     } catch (error) {
       console.error('Error fetching user data:', error)
       setState(prev => ({ ...prev, isLoading: false, isAuthenticated: false }))
     }
-  }, [])
+  }, [generateLocalAlerts])
 
   // Initialize auth state
   useEffect(() => {
@@ -1486,6 +1690,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const isSubscriptionActive = (): boolean => {
     if (!state.subscription) return false
+    // VIP tier is always active regardless of status
+    if (state.subscription.tier === 'vip') return true
     const activeStatuses = ['trialing', 'active']
     return activeStatuses.includes(state.subscription.status)
   }
