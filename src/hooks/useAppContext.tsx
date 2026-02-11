@@ -1053,7 +1053,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (data) {
       setState(prev => ({
         ...prev,
-        checklists: [{ ...checklist, id: data.id }, ...prev.checklists],
+        checklists: [{ ...checklist, id: data.id, locationId: state.activeLocationId } as any, ...prev.checklists],
       }))
     }
   }
@@ -1115,7 +1115,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (data) {
       setState(prev => ({
         ...prev,
-        temperatureLogs: [{ ...log, id: data.id }, ...prev.temperatureLogs],
+        temperatureLogs: [{ ...log, id: data.id, locationId: state.activeLocationId } as any, ...prev.temperatureLogs],
       }))
     }
   }
@@ -1156,7 +1156,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (data) {
       setState(prev => ({
         ...prev,
-        cleaningRecords: [{ ...record, id: data.id }, ...prev.cleaningRecords],
+        cleaningRecords: [{ ...record, id: data.id, locationId: state.activeLocationId } as any, ...prev.cleaningRecords],
       }))
     }
   }
@@ -1201,7 +1201,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (data) {
       setState(prev => ({
         ...prev,
-        suppliers: [...prev.suppliers, { ...supplier, id: data.id }],
+        suppliers: [...prev.suppliers, { ...supplier, id: data.id, locationId: state.activeLocationId } as any],
       }))
     }
   }
@@ -1258,7 +1258,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (data) {
       setState(prev => ({
         ...prev,
-        dishes: [...prev.dishes, { ...dish, id: data.id }],
+        dishes: [...prev.dishes, { ...dish, id: data.id, locationId: state.activeLocationId } as any],
       }))
     }
   }
@@ -1313,7 +1313,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (data) {
       setState(prev => ({
         ...prev,
-        wasteLogs: [{ ...log, id: data.id }, ...prev.wasteLogs],
+        wasteLogs: [{ ...log, id: data.id, locationId: state.activeLocationId } as any, ...prev.wasteLogs],
       }))
     }
   }
@@ -1341,7 +1341,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (data) {
       setState(prev => ({
         ...prev,
-        maintenanceLogs: [{ ...log, id: data.id }, ...prev.maintenanceLogs],
+        maintenanceLogs: [{ ...log, id: data.id, locationId: state.activeLocationId } as any, ...prev.maintenanceLogs],
       }))
     }
   }
@@ -1368,7 +1368,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (data) {
       setState(prev => ({
         ...prev,
-        spotChecks: [{ ...check, id: data.id }, ...prev.spotChecks],
+        spotChecks: [{ ...check, id: data.id, locationId: state.activeLocationId } as any, ...prev.spotChecks],
       }))
     }
   }
@@ -1414,7 +1414,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (data) {
       setState(prev => ({
         ...prev,
-        appliances: [...prev.appliances, { ...appliance, id: data.id }],
+        appliances: [...prev.appliances, { ...appliance, id: data.id, locationId: state.activeLocationId } as any],
       }))
     }
   }
@@ -1576,7 +1576,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (data) {
       setState(prev => ({
         ...prev,
-        diaryEntries: [{ ...entry, id: data.id }, ...prev.diaryEntries],
+        diaryEntries: [{ ...entry, id: data.id, locationId: state.activeLocationId } as any, ...prev.diaryEntries],
       }))
     }
   }
@@ -1622,7 +1622,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (data) {
       setState(prev => ({
         ...prev,
-        weeklyExtraChecks: [{ ...check, id: data.id }, ...prev.weeklyExtraChecks],
+        weeklyExtraChecks: [{ ...check, id: data.id, locationId: state.activeLocationId } as any, ...prev.weeklyExtraChecks],
       }))
     }
   }
@@ -1682,7 +1682,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (data) {
       setState(prev => ({
         ...prev,
-        fourWeeklyReviews: [{ ...review, id: data.id }, ...prev.fourWeeklyReviews],
+        fourWeeklyReviews: [{ ...review, id: data.id, locationId: state.activeLocationId } as any, ...prev.fourWeeklyReviews],
       }))
     }
   }
