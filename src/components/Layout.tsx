@@ -28,8 +28,26 @@ import {
   MapPinIcon,
 } from 'lucide-react'
 
-// Main bottom nav items (max 5 for mobile)
-const mainNav = [
+// All navigation items for sidebar (tablet/desktop)
+const allNavItems = [
+  { name: 'Dashboard', href: '/', icon: HomeIcon },
+  { name: 'Temperature', href: '/temperature', icon: ThermometerIcon },
+  { name: 'Checklists', href: '/checks', icon: ClipboardCheckIcon },
+  { name: 'Cleaning', href: '/cleaning', icon: SparklesIcon },
+  { name: 'SFBB Diary', href: '/diary', icon: CalendarDaysIcon },
+  { name: 'Bulk Entry', href: '/bulk-entry', icon: ClockIcon },
+  { name: 'Suppliers', href: '/suppliers', icon: TruckIcon },
+  { name: 'Allergens', href: '/allergens', icon: AlertTriangleIcon },
+  { name: 'Waste', href: '/waste', icon: TrashIcon },
+  { name: 'Maintenance', href: '/maintenance', icon: WrenchIcon },
+  { name: 'Employees', href: '/employees', icon: UsersIcon },
+  { name: 'Records', href: '/records', icon: FolderIcon },
+  { name: 'Resources', href: '/resources', icon: BookOpenIcon },
+  { name: 'Settings', href: '/settings', icon: SettingsIcon },
+]
+
+// Main bottom nav items for mobile (max 5)
+const mobileNavItems = [
   { name: 'Home', href: '/', icon: HomeIcon },
   { name: 'Temps', href: '/temperature', icon: ThermometerIcon },
   { name: 'Checks', href: '/checks', icon: ClipboardCheckIcon },
@@ -37,8 +55,8 @@ const mainNav = [
   { name: 'More', href: '#more', icon: MenuIcon },
 ]
 
-// Secondary nav items (shown in "More" menu)
-const moreNav = [
+// Secondary nav items (shown in "More" menu on mobile)
+const moreNavItems = [
   { name: 'SFBB Diary', href: '/diary', icon: CalendarDaysIcon },
   { name: 'Bulk Entry', href: '/bulk-entry', icon: ClockIcon },
   { name: 'Suppliers', href: '/suppliers', icon: TruckIcon },
@@ -100,245 +118,327 @@ export default function Layout({ children }: LayoutProps) {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 pb-20">
-      {/* Top Header Bar */}
-      <header className="sticky top-0 z-40 bg-gradient-to-r from-sfbb-600 via-sfbb-500 to-sfbb-600 shadow-lg animate-gradient">
-        <div className="flex items-center justify-between h-20 px-4">
-          {/* Logo */}
-          <div className="flex items-center">
-            <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center animate-pulse-slow shadow-lg border border-white/30">
-              <span className="text-white font-black text-lg tracking-tight">SF</span>
-            </div>
+    <div className="min-h-screen bg-slate-100">
+      {/* Desktop/Tablet Sidebar - Hidden on mobile */}
+      <aside className="hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:left-0 lg:w-64 lg:bg-white lg:border-r lg:border-slate-200 lg:z-40">
+        {/* Sidebar Header */}
+        <div className="flex items-center gap-3 h-16 px-4 border-b border-slate-200 bg-gradient-to-r from-sfbb-600 to-sfbb-500">
+          <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-lg border border-white/30">
+            <span className="text-white font-black text-sm tracking-tight">SF</span>
           </div>
-
-          {/* Center - Business Name & Location */}
-          <div className="flex-1 text-center px-4 relative">
-            {business?.name ? (
-              hasLocations && activeLocation ? (
-                canSwitchLocations ? (
-                  <button
-                    onClick={() => setShowLocationPicker(!showLocationPicker)}
-                    className="inline-flex items-center gap-1 text-white font-bold text-lg animate-fade-in hover:bg-white/10 rounded-lg px-2 py-1 transition-colors max-w-full"
-                  >
-                    <span className="truncate">{business.name}</span>
-                    <span className="text-white/60 mx-1 flex-shrink-0">›</span>
-                    <span className="truncate text-white/90">{activeLocation.name}</span>
-                    <ChevronDownIcon className="w-4 h-4 text-white/70 flex-shrink-0" />
-                  </button>
-                ) : (
-                  <div className="inline-flex items-center gap-1 text-white font-bold text-lg animate-fade-in max-w-full">
-                    <span className="truncate">{business.name}</span>
-                    <span className="text-white/60 mx-1 flex-shrink-0">›</span>
-                    <span className="truncate text-white/90">{activeLocation.name}</span>
-                  </div>
-                )
-              ) : (
-                <h1 className="text-white font-bold text-lg truncate animate-fade-in">
-                  {business.name}
-                </h1>
-              )
-            ) : (
-              <h1 className="text-white font-bold text-lg">SFBB Pro</h1>
-            )}
-            {business?.foodHygieneRating !== undefined && !hasLocations && (
-              <div className="inline-flex items-center gap-1 mt-1 px-2.5 py-0.5 bg-white/20 backdrop-blur-sm rounded-full">
-                <span className="text-white/90 text-xs font-semibold">
-                  Rating: {business.foodHygieneRating}/5
-                </span>
-              </div>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-white font-bold text-sm truncate">
+              {business?.name || 'SFBB Pro'}
+            </h1>
+            {hasLocations && activeLocation && (
+              <p className="text-white/80 text-xs truncate">{activeLocation.name}</p>
             )}
           </div>
+        </div>
 
-          {/* Right side actions */}
-          <div className="flex items-center">
-            {/* Notifications */}
+        {/* Location Switcher (if multiple locations) */}
+        {canSwitchLocations && (
+          <div className="px-3 py-2 border-b border-slate-200">
             <button
-              onClick={() => setShowAlerts(!showAlerts)}
-              className="relative p-3 rounded-2xl bg-white/10 hover:bg-white/20 active:bg-white/30 transition-all duration-200"
+              onClick={() => setShowLocationPicker(!showLocationPicker)}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors"
             >
-              <BellIcon className="w-6 h-6 text-white" />
+              <MapPinIcon className="w-4 h-4 text-sfbb-600" />
+              <span className="flex-1 text-left text-sm font-medium text-slate-700 truncate">
+                {activeLocation?.name}
+              </span>
+              <ChevronDownIcon className="w-4 h-4 text-slate-400" />
+            </button>
+          </div>
+        )}
+
+        {/* Navigation Links */}
+        <nav className="flex-1 overflow-y-auto py-4 px-3">
+          <div className="space-y-1">
+            {allNavItems.map(item => {
+              const isActive = location.pathname === item.href
+              return (
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
+                    isActive
+                      ? 'bg-sfbb-50 text-sfbb-700 font-medium'
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                  }`}
+                >
+                  <item.icon className={`w-5 h-5 ${isActive ? 'text-sfbb-600' : 'text-slate-400'}`} />
+                  <span className="text-sm">{item.name}</span>
+                </Link>
+              )
+            })}
+          </div>
+        </nav>
+
+        {/* Sidebar Footer - Alerts */}
+        <div className="p-3 border-t border-slate-200">
+          <button
+            onClick={() => setShowAlerts(!showAlerts)}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-50 transition-colors"
+          >
+            <div className="relative">
+              <BellIcon className="w-5 h-5 text-slate-400" />
               {unacknowledgedCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center font-bold animate-bounce shadow-lg">
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[9px] rounded-full flex items-center justify-center font-bold">
                   {unacknowledgedCount}
                 </span>
               )}
-            </button>
-          </div>
+            </div>
+            <span className="text-sm text-slate-600">Alerts</span>
+          </button>
         </div>
-      </header>
+      </aside>
 
-      {/* Location Picker Dropdown */}
-      {showLocationPicker && canSwitchLocations && (
-        <>
-          {/* Backdrop */}
-          <div
-            className="fixed inset-0 bg-black/50 z-50"
-            onClick={() => setShowLocationPicker(false)}
-          />
-
-          {/* Dropdown */}
-          <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-white rounded-2xl shadow-2xl w-72 overflow-hidden animate-slide-down">
-            {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-slate-50">
-              <h2 className="text-base font-bold text-slate-900">Switch Location</h2>
-              <button
-                onClick={() => setShowLocationPicker(false)}
-                className="p-1.5 rounded-full hover:bg-slate-200 active:bg-slate-300"
-              >
-                <XIcon className="w-4 h-4 text-slate-500" />
-              </button>
+      {/* Main Content Area */}
+      <div className="lg:pl-64">
+        {/* Top Header Bar - Simplified on desktop */}
+        <header className="sticky top-0 z-40 bg-gradient-to-r from-sfbb-600 via-sfbb-500 to-sfbb-600 shadow-lg animate-gradient lg:bg-white lg:shadow-sm lg:border-b lg:border-slate-200">
+          <div className="flex items-center justify-between h-16 lg:h-14 px-4">
+            {/* Mobile: Logo */}
+            <div className="flex items-center lg:hidden">
+              <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center animate-pulse-slow shadow-lg border border-white/30">
+                <span className="text-white font-black text-sm tracking-tight">SF</span>
+              </div>
             </div>
 
-            {/* Locations List */}
-            <div className="max-h-64 overflow-y-auto">
-              {locations.map(loc => (
+            {/* Desktop: Page Title */}
+            <div className="hidden lg:block">
+              <h1 className="text-lg font-semibold text-slate-900">
+                {allNavItems.find(item => item.href === location.pathname)?.name || 'Dashboard'}
+              </h1>
+            </div>
+
+            {/* Mobile: Business Name & Location */}
+            <div className="flex-1 text-center px-4 lg:hidden relative">
+              {business?.name ? (
+                hasLocations && activeLocation ? (
+                  canSwitchLocations ? (
+                    <button
+                      onClick={() => setShowLocationPicker(!showLocationPicker)}
+                      className="inline-flex items-center gap-1 text-white font-bold text-base animate-fade-in hover:bg-white/10 rounded-lg px-2 py-1 transition-colors max-w-full"
+                    >
+                      <span className="truncate max-w-[100px]">{business.name}</span>
+                      <span className="text-white/60 mx-1 flex-shrink-0">›</span>
+                      <span className="truncate max-w-[80px] text-white/90">{activeLocation.name}</span>
+                      <ChevronDownIcon className="w-4 h-4 text-white/70 flex-shrink-0" />
+                    </button>
+                  ) : (
+                    <div className="inline-flex items-center gap-1 text-white font-bold text-base animate-fade-in max-w-full">
+                      <span className="truncate max-w-[100px]">{business.name}</span>
+                      <span className="text-white/60 mx-1 flex-shrink-0">›</span>
+                      <span className="truncate max-w-[80px] text-white/90">{activeLocation.name}</span>
+                    </div>
+                  )
+                ) : (
+                  <h1 className="text-white font-bold text-base truncate animate-fade-in">
+                    {business.name}
+                  </h1>
+                )
+              ) : (
+                <h1 className="text-white font-bold text-base">SFBB Pro</h1>
+              )}
+            </div>
+
+            {/* Right side actions */}
+            <div className="flex items-center gap-2">
+              {/* Desktop: Location Switcher Button */}
+              {canSwitchLocations && (
                 <button
-                  key={loc.id}
-                  onClick={() => {
-                    setActiveLocation(loc.id)
-                    setShowLocationPicker(false)
-                  }}
-                  className={`w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-slate-50 active:bg-slate-100 transition-colors ${
-                    loc.id === activeLocationId ? 'bg-sfbb-50' : ''
-                  }`}
+                  onClick={() => setShowLocationPicker(!showLocationPicker)}
+                  className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 transition-colors"
                 >
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                    loc.id === activeLocationId ? 'bg-sfbb-100' : 'bg-slate-100'
-                  }`}>
-                    <MapPinIcon className={`w-5 h-5 ${
-                      loc.id === activeLocationId ? 'text-sfbb-600' : 'text-slate-500'
-                    }`} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className={`font-medium truncate ${
-                        loc.id === activeLocationId ? 'text-sfbb-700' : 'text-slate-900'
-                      }`}>
-                        {loc.name}
-                      </span>
-                      {loc.isPrimary && (
-                        <span className="text-[10px] px-1.5 py-0.5 bg-sfbb-100 text-sfbb-600 rounded font-medium">
-                          Primary
+                  <MapPinIcon className="w-4 h-4 text-sfbb-600" />
+                  <span className="text-sm font-medium text-slate-700">{activeLocation?.name}</span>
+                  <ChevronDownIcon className="w-4 h-4 text-slate-400" />
+                </button>
+              )}
+
+              {/* Notifications - Mobile only (desktop has it in sidebar) */}
+              <button
+                onClick={() => setShowAlerts(!showAlerts)}
+                className="relative p-2.5 rounded-xl bg-white/10 hover:bg-white/20 active:bg-white/30 transition-all duration-200 lg:bg-slate-100 lg:hover:bg-slate-200"
+              >
+                <BellIcon className="w-5 h-5 text-white lg:text-slate-600" />
+                {unacknowledgedCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center font-bold shadow-lg">
+                    {unacknowledgedCount}
+                  </span>
+                )}
+              </button>
+            </div>
+          </div>
+        </header>
+
+        {/* Location Picker Dropdown */}
+        {showLocationPicker && canSwitchLocations && (
+          <>
+            <div
+              className="fixed inset-0 bg-black/50 z-50"
+              onClick={() => setShowLocationPicker(false)}
+            />
+            <div className="fixed top-16 left-4 right-4 lg:left-auto lg:right-4 lg:top-14 lg:w-80 z-50 bg-white rounded-2xl shadow-2xl overflow-hidden animate-slide-down">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-slate-50">
+                <h2 className="text-base font-bold text-slate-900">Switch Location</h2>
+                <button
+                  onClick={() => setShowLocationPicker(false)}
+                  className="p-1.5 rounded-full hover:bg-slate-200 active:bg-slate-300"
+                >
+                  <XIcon className="w-4 h-4 text-slate-500" />
+                </button>
+              </div>
+              <div className="max-h-64 overflow-y-auto">
+                {locations.map(loc => (
+                  <button
+                    key={loc.id}
+                    onClick={() => {
+                      setActiveLocation(loc.id)
+                      setShowLocationPicker(false)
+                    }}
+                    className={`w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-slate-50 active:bg-slate-100 transition-colors ${
+                      loc.id === activeLocationId ? 'bg-sfbb-50' : ''
+                    }`}
+                  >
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                      loc.id === activeLocationId ? 'bg-sfbb-100' : 'bg-slate-100'
+                    }`}>
+                      <MapPinIcon className={`w-5 h-5 ${
+                        loc.id === activeLocationId ? 'text-sfbb-600' : 'text-slate-500'
+                      }`} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className={`font-medium truncate ${
+                          loc.id === activeLocationId ? 'text-sfbb-700' : 'text-slate-900'
+                        }`}>
+                          {loc.name}
                         </span>
+                        {loc.isPrimary && (
+                          <span className="text-[10px] px-1.5 py-0.5 bg-sfbb-100 text-sfbb-600 rounded font-medium">
+                            Primary
+                          </span>
+                        )}
+                      </div>
+                      {loc.address && (
+                        <p className="text-xs text-slate-500 truncate">{loc.address}</p>
                       )}
                     </div>
-                    {loc.address && (
-                      <p className="text-xs text-slate-500 truncate">{loc.address}</p>
+                    {loc.id === activeLocationId && (
+                      <CheckIcon className="w-5 h-5 text-sfbb-600 flex-shrink-0" />
                     )}
-                  </div>
-                  {loc.id === activeLocationId && (
-                    <CheckIcon className="w-5 h-5 text-sfbb-600 flex-shrink-0" />
-                  )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Alerts Panel */}
+        {showAlerts && (
+          <>
+            <div
+              className="fixed inset-0 bg-black/50 z-50"
+              onClick={() => setShowAlerts(false)}
+            />
+            <div className="fixed top-16 right-2 left-2 lg:left-auto lg:right-4 lg:top-14 lg:w-96 z-50 bg-white rounded-2xl shadow-2xl max-h-[70vh] overflow-hidden animate-slide-down">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-slate-50">
+                <h2 className="text-lg font-bold text-slate-900">Alerts</h2>
+                <button
+                  onClick={() => setShowAlerts(false)}
+                  className="p-2 rounded-full hover:bg-slate-200 active:bg-slate-300"
+                >
+                  <XIcon className="w-5 h-5 text-slate-500" />
                 </button>
-              ))}
-            </div>
-          </div>
-        </>
-      )}
-
-      {/* Alerts Panel */}
-      {showAlerts && (
-        <>
-          {/* Backdrop */}
-          <div
-            className="fixed inset-0 bg-black/50 z-50"
-            onClick={() => setShowAlerts(false)}
-          />
-
-          {/* Alerts Dropdown */}
-          <div className="fixed top-20 right-2 left-2 md:left-auto md:right-4 md:w-96 z-50 bg-white rounded-2xl shadow-2xl max-h-[70vh] overflow-hidden animate-slide-down">
-            {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-slate-50">
-              <h2 className="text-lg font-bold text-slate-900">Alerts</h2>
-              <button
-                onClick={() => setShowAlerts(false)}
-                className="p-2 rounded-full hover:bg-slate-200 active:bg-slate-300"
-              >
-                <XIcon className="w-5 h-5 text-slate-500" />
-              </button>
-            </div>
-
-            {/* Alerts List */}
-            <div className="overflow-y-auto max-h-[calc(70vh-60px)]">
-              {alerts.length === 0 ? (
-                <div className="p-8 text-center">
-                  <BellIcon className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                  <p className="text-slate-500">No alerts</p>
-                  <p className="text-slate-400 text-sm">You're all caught up!</p>
-                </div>
-              ) : (
-                <div className="divide-y divide-slate-100">
-                  {alerts.slice(0, 20).map(alert => {
-                    const AlertIcon = getAlertIcon(alert.type)
-                    return (
-                      <div
-                        key={alert.id}
-                        className={`p-4 ${alert.acknowledged ? 'bg-slate-50 opacity-60' : 'bg-white'}`}
-                      >
-                        <div className="flex gap-3">
-                          <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${getSeverityColor(alert.severity)}`}>
-                            <AlertIcon className="w-5 h-5" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between gap-2">
-                              <div>
-                                <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold text-white mb-1 ${getSeverityBadge(alert.severity)}`}>
-                                  {alert.severity.toUpperCase()}
-                                </span>
-                                <h3 className="font-semibold text-slate-900 text-sm">
-                                  {alert.title}
-                                </h3>
-                              </div>
+              </div>
+              <div className="overflow-y-auto max-h-[calc(70vh-60px)]">
+                {alerts.length === 0 ? (
+                  <div className="p-8 text-center">
+                    <BellIcon className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                    <p className="text-slate-500">No alerts</p>
+                    <p className="text-slate-400 text-sm">You're all caught up!</p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-slate-100">
+                    {alerts.slice(0, 20).map(alert => {
+                      const AlertIcon = getAlertIcon(alert.type)
+                      return (
+                        <div
+                          key={alert.id}
+                          className={`p-4 ${alert.acknowledged ? 'bg-slate-50 opacity-60' : 'bg-white'}`}
+                        >
+                          <div className="flex gap-3">
+                            <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${getSeverityColor(alert.severity)}`}>
+                              <AlertIcon className="w-5 h-5" />
                             </div>
-                            <p className="text-slate-600 text-xs mt-1 line-clamp-2">
-                              {alert.message}
-                            </p>
-                            <div className="flex items-center justify-between mt-2">
-                              <span className="text-slate-400 text-[10px]">
-                                {new Date(alert.date).toLocaleDateString('en-GB', {
-                                  day: 'numeric',
-                                  month: 'short',
-                                  hour: '2-digit',
-                                  minute: '2-digit'
-                                })}
-                              </span>
-                              {!alert.acknowledged && (
-                                <div className="flex gap-2">
-                                  <button
-                                    onClick={() => acknowledgeAlert(alert.id)}
-                                    className="text-xs text-sfbb-600 font-medium hover:text-sfbb-700 flex items-center gap-1"
-                                  >
-                                    <CheckIcon className="w-3 h-3" />
-                                    Acknowledge
-                                  </button>
-                                  <button
-                                    onClick={() => dismissAlert(alert.id)}
-                                    className="text-xs text-slate-400 font-medium hover:text-slate-600"
-                                  >
-                                    Dismiss
-                                  </button>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-start justify-between gap-2">
+                                <div>
+                                  <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold text-white mb-1 ${getSeverityBadge(alert.severity)}`}>
+                                    {alert.severity.toUpperCase()}
+                                  </span>
+                                  <h3 className="font-semibold text-slate-900 text-sm">
+                                    {alert.title}
+                                  </h3>
                                 </div>
-                              )}
+                              </div>
+                              <p className="text-slate-600 text-xs mt-1 line-clamp-2">
+                                {alert.message}
+                              </p>
+                              <div className="flex items-center justify-between mt-2">
+                                <span className="text-slate-400 text-[10px]">
+                                  {new Date(alert.date).toLocaleDateString('en-GB', {
+                                    day: 'numeric',
+                                    month: 'short',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  })}
+                                </span>
+                                {!alert.acknowledged && (
+                                  <div className="flex gap-2">
+                                    <button
+                                      onClick={() => acknowledgeAlert(alert.id)}
+                                      className="text-xs text-sfbb-600 font-medium hover:text-sfbb-700 flex items-center gap-1"
+                                    >
+                                      <CheckIcon className="w-3 h-3" />
+                                      Acknowledge
+                                    </button>
+                                    <button
+                                      onClick={() => dismissAlert(alert.id)}
+                                      className="text-xs text-slate-400 font-medium hover:text-slate-600"
+                                    >
+                                      Dismiss
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
+          </>
+        )}
+
+        {/* Main Content */}
+        <main className="p-4 pb-24 lg:pb-6 lg:p-6">
+          <div className="max-w-7xl mx-auto">
+            {children}
           </div>
-        </>
-      )}
+        </main>
+      </div>
 
-      {/* Main Content */}
-      <main className="p-4">{children}</main>
-
-      {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-slate-200 safe-area-bottom">
+      {/* Mobile Bottom Navigation - Hidden on desktop */}
+      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-slate-200 safe-area-bottom lg:hidden">
         <div className="flex items-center justify-around h-16">
-          {mainNav.map(item => {
+          {mobileNavItems.map(item => {
             const isActive = item.href === '#more'
               ? isMoreMenuOpen
               : location.pathname === item.href
@@ -375,23 +475,17 @@ export default function Layout({ children }: LayoutProps) {
         </div>
       </nav>
 
-      {/* More Menu - Slide up sheet */}
+      {/* Mobile More Menu - Slide up sheet */}
       {isMoreMenuOpen && (
         <>
-          {/* Backdrop */}
           <div
-            className="fixed inset-0 bg-black/50 z-50"
+            className="fixed inset-0 bg-black/50 z-50 lg:hidden"
             onClick={toggleSidebar}
           />
-
-          {/* Bottom Sheet */}
-          <div className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-3xl animate-slide-up safe-area-bottom">
-            {/* Handle */}
+          <div className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-3xl animate-slide-up safe-area-bottom lg:hidden">
             <div className="flex justify-center pt-3 pb-2">
               <div className="w-10 h-1 bg-slate-300 rounded-full" />
             </div>
-
-            {/* Header */}
             <div className="flex items-center justify-between px-5 pb-3 border-b border-slate-100">
               <h2 className="text-lg font-bold text-slate-900">More</h2>
               <button
@@ -401,10 +495,8 @@ export default function Layout({ children }: LayoutProps) {
                 <XIcon className="w-5 h-5 text-slate-500" />
               </button>
             </div>
-
-            {/* Menu Items */}
             <div className="p-3 grid grid-cols-3 gap-2">
-              {moreNav.map(item => (
+              {moreNavItems.map(item => (
                 <Link
                   key={item.name}
                   to={item.href}
@@ -418,8 +510,6 @@ export default function Layout({ children }: LayoutProps) {
                 </Link>
               ))}
             </div>
-
-            {/* Extra padding for safe area */}
             <div className="h-6" />
           </div>
         </>
