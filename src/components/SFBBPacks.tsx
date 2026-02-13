@@ -598,6 +598,23 @@ export default function SFBBPacks() {
     if (!selectedPack || !selectedSection) return
 
     await updateSFBBPackSection(selectedPack.id, selectedSection.key, formData)
+
+    // Update local selectedPack state with the new section data
+    setSelectedPack(prev => {
+      if (!prev) return prev
+      return {
+        ...prev,
+        data: {
+          ...prev.data,
+          [selectedSection.key]: {
+            ...(prev.data[selectedSection.key] || {}),
+            ...formData,
+          },
+        },
+        updatedAt: new Date().toISOString(),
+      }
+    })
+
     setSelectedSection(null)
     setFormData({})
   }
@@ -613,12 +630,23 @@ export default function SFBBPacks() {
 
   const handleSignOff = async () => {
     if (!selectedPack || !signOffName.trim()) return
+    const now = new Date().toISOString()
     await signOffSFBBPack(selectedPack.id, signOffName.trim())
+
+    // Update local state immediately
+    setSelectedPack(prev => {
+      if (!prev) return prev
+      return {
+        ...prev,
+        signedOff: true,
+        signedOffBy: signOffName.trim(),
+        signedOffAt: now,
+        updatedAt: now,
+      }
+    })
+
     setShowSignOff(false)
     setSignOffName('')
-    // Refresh pack data
-    const updated = sfbbPacks.find(p => p.id === selectedPack.id)
-    if (updated) setSelectedPack(updated)
   }
 
   const getSections = () => {
