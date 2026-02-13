@@ -23,6 +23,8 @@ import {
   SubscriptionFeature,
   TIER_FEATURES,
   Location,
+  SFBBPack,
+  SFBBPackType,
 } from '../types'
 
 interface AppState {
@@ -58,6 +60,7 @@ interface AppState {
   diaryEntries: DiaryEntry[]
   weeklyExtraChecks: WeeklyExtraCheck[]
   fourWeeklyReviews: FourWeeklyReview[]
+  sfbbPacks: SFBBPack[]
 
   // UI State
   activeTab: string
@@ -148,6 +151,13 @@ interface AppContextType extends AppState {
   addFourWeeklyReview: (review: Omit<FourWeeklyReview, 'id'>) => Promise<void>
   updateFourWeeklyReview: (id: string, data: Partial<FourWeeklyReview>) => Promise<void>
 
+  // SFBB Pack actions
+  addSFBBPack: (pack: { packType: SFBBPackType; name: string }) => Promise<SFBBPack | null>
+  updateSFBBPack: (id: string, data: Partial<SFBBPack>) => Promise<void>
+  deleteSFBBPack: (id: string) => Promise<void>
+  updateSFBBPackSection: (id: string, sectionKey: string, fieldData: Record<string, any>) => Promise<void>
+  signOffSFBBPack: (id: string, signedBy: string) => Promise<void>
+
   // UI actions
   setActiveTab: (tab: string) => void
   toggleSidebar: () => void
@@ -208,6 +218,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     diaryEntries: [],
     weeklyExtraChecks: [],
     fourWeeklyReviews: [],
+    sfbbPacks: [],
     activeTab: 'dashboard',
     sidebarOpen: false,
     settingsUnlocked: false,
@@ -445,6 +456,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         { data: fourWeeklyReviews },
         { data: subscriptionData },
         { data: locationsData },
+        { data: sfbbPacksData },
       ] = await Promise.all([
         supabase.from('employees').select('*, certificates(*), training_records(*)').eq('user_id', userId),
         supabase.from('appliances').select('*').eq('user_id', userId),
@@ -463,6 +475,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         supabase.from('four_weekly_reviews').select('*').eq('user_id', userId).order('review_date', { ascending: false }),
         supabase.from('subscriptions').select('*').eq('user_id', userId).maybeSingle(),
         supabase.from('locations').select('*').eq('user_id', userId).order('is_primary', { ascending: false }),
+        supabase.from('sfbb_packs').select('*').eq('user_id', userId).order('updated_at', { ascending: false }),
       ])
 
       // Transform data from snake_case to camelCase
@@ -706,6 +719,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
         isPrimary: l.is_primary,
       }))
 
+      const transformedSFBBPacks: SFBBPack[] = (sfbbPacksData || []).map((p: any) => ({
+        id: p.id,
+        packType: p.pack_type,
+        name: p.name,
+        createdAt: p.created_at,
+        updatedAt: p.updated_at,
+        completedSections: p.completed_sections,
+        totalSections: p.total_sections,
+        data: p.data || {},
+        signedOff: p.signed_off,
+        signedOffBy: p.signed_off_by,
+        signedOffAt: p.signed_off_at,
+        locationId: p.location_id,
+      }))
+
       // Set active location to primary or first location
       const primaryLocation = transformedLocations.find(l => l.isPrimary) || transformedLocations[0]
 
@@ -741,6 +769,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         diaryEntries: transformedDiaryEntries,
         weeklyExtraChecks: transformedWeeklyExtraChecks,
         fourWeeklyReviews: transformedFourWeeklyReviews,
+        sfbbPacks: transformedSFBBPacks,
         isLoading: false,
       }))
 
@@ -830,6 +859,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           diaryEntries: [],
           weeklyExtraChecks: [],
           fourWeeklyReviews: [],
+          sfbbPacks: [],
           settingsUnlocked: false,
         }))
       }
@@ -1718,6 +1748,124 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }))
   }
 
+  // SFBB Pack actions
+  const addSFBBPack = async (pack: { packType: SFBBPackType; name: string }): Promise<SFBBPack | null> => {
+    if (!state.supabaseUser) return null
+    const { data, error } = await supabase
+      .from('sfbb_packs')
+      .insert({
+        user_id: state.supabaseUser.id,
+        location_id: state.activeLocationId,
+        pack_type: pack.packType,
+        name: pack.name,
+        data: {},
+        completed_sections: 0,
+        total_sections: 0,
+        signed_off: false,
+      })
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Error creating SFBB pack:', error)
+      return null
+    }
+
+    if (data) {
+      const newPack: SFBBPack = {
+        id: data.id,
+        packType: data.pack_type,
+        name: data.name,
+        createdAt: data.created_at,
+        updatedAt: data.updated_at,
+        completedSections: data.completed_sections,
+        totalSections: data.total_sections,
+        data: data.data || {},
+        signedOff: data.signed_off,
+        signedOffBy: data.signed_off_by,
+        signedOffAt: data.signed_off_at,
+      }
+      setState(prev => ({
+        ...prev,
+        sfbbPacks: [{ ...newPack, locationId: state.activeLocationId } as any, ...prev.sfbbPacks],
+      }))
+      return newPack
+    }
+    return null
+  }
+
+  const updateSFBBPack = async (id: string, data: Partial<SFBBPack>) => {
+    await supabase
+      .from('sfbb_packs')
+      .update({
+        name: data.name,
+        data: data.data,
+        completed_sections: data.completedSections,
+        total_sections: data.totalSections,
+        signed_off: data.signedOff,
+        signed_off_by: data.signedOffBy,
+        signed_off_at: data.signedOffAt,
+      })
+      .eq('id', id)
+
+    setState(prev => ({
+      ...prev,
+      sfbbPacks: prev.sfbbPacks.map(p => p.id === id ? { ...p, ...data, updatedAt: new Date().toISOString() } : p),
+    }))
+  }
+
+  const deleteSFBBPack = async (id: string) => {
+    await supabase.from('sfbb_packs').delete().eq('id', id)
+    setState(prev => ({
+      ...prev,
+      sfbbPacks: prev.sfbbPacks.filter(p => p.id !== id),
+    }))
+  }
+
+  const updateSFBBPackSection = async (id: string, sectionKey: string, fieldData: Record<string, any>) => {
+    const pack = state.sfbbPacks.find(p => p.id === id)
+    if (!pack) return
+
+    const newData = {
+      ...pack.data,
+      [sectionKey]: {
+        ...(pack.data[sectionKey] || {}),
+        ...fieldData,
+      },
+    }
+
+    await supabase
+      .from('sfbb_packs')
+      .update({ data: newData })
+      .eq('id', id)
+
+    setState(prev => ({
+      ...prev,
+      sfbbPacks: prev.sfbbPacks.map(p =>
+        p.id === id ? { ...p, data: newData, updatedAt: new Date().toISOString() } : p
+      ),
+    }))
+  }
+
+  const signOffSFBBPack = async (id: string, signedBy: string) => {
+    const now = new Date().toISOString()
+    await supabase
+      .from('sfbb_packs')
+      .update({
+        signed_off: true,
+        signed_off_by: signedBy,
+        signed_off_at: now,
+      })
+      .eq('id', id)
+
+    setState(prev => ({
+      ...prev,
+      sfbbPacks: prev.sfbbPacks.map(p =>
+        p.id === id ? { ...p, signedOff: true, signedOffBy: signedBy, signedOffAt: now, updatedAt: now } : p
+      ),
+    }))
+  }
+
   // Location actions
   const addLocation = async (location: Omit<Location, 'id'>) => {
     if (!state.supabaseUser) return
@@ -1805,6 +1953,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       'diary_entries',
       'weekly_extra_checks',
       'four_weekly_reviews',
+      'sfbb_packs',
     ]
 
     for (const table of tables) {
@@ -1831,6 +1980,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       diaryEntries: prev.diaryEntries.filter((r: any) => r.locationId != null),
       weeklyExtraChecks: prev.weeklyExtraChecks.filter((r: any) => r.locationId != null),
       fourWeeklyReviews: prev.fourWeeklyReviews.filter((r: any) => r.locationId != null),
+      sfbbPacks: prev.sfbbPacks.filter((r: any) => r.locationId != null),
     }))
   }
 
@@ -1852,6 +2002,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       'diary_entries',
       'weekly_extra_checks',
       'four_weekly_reviews',
+      'sfbb_packs',
     ]
 
     for (const table of tables) {
@@ -1878,6 +2029,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       diaryEntries: prev.diaryEntries.map((r: any) => r.locationId == null ? { ...r, locationId } : r),
       weeklyExtraChecks: prev.weeklyExtraChecks.map((r: any) => r.locationId == null ? { ...r, locationId } : r),
       fourWeeklyReviews: prev.fourWeeklyReviews.map((r: any) => r.locationId == null ? { ...r, locationId } : r),
+      sfbbPacks: prev.sfbbPacks.map((r: any) => r.locationId == null ? { ...r, locationId } : r),
     }))
   }
 
@@ -1900,6 +2052,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       'diary_entries',
       'weekly_extra_checks',
       'four_weekly_reviews',
+      'sfbb_packs',
     ]
 
     for (const table of tables) {
@@ -1926,6 +2079,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       diaryEntries: prev.diaryEntries.filter((r: any) => r.locationId !== locationId),
       weeklyExtraChecks: prev.weeklyExtraChecks.filter((r: any) => r.locationId !== locationId),
       fourWeeklyReviews: prev.fourWeeklyReviews.filter((r: any) => r.locationId !== locationId),
+      sfbbPacks: prev.sfbbPacks.filter((r: any) => r.locationId !== locationId),
     }))
   }
 
@@ -2062,6 +2216,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const filteredDiaryEntries = filterByLocation(state.diaryEntries as (DiaryEntry & { locationId?: string | null })[])
   const filteredWeeklyExtraChecks = filterByLocation(state.weeklyExtraChecks as (WeeklyExtraCheck & { locationId?: string | null })[])
   const filteredFourWeeklyReviews = filterByLocation(state.fourWeeklyReviews as (FourWeeklyReview & { locationId?: string | null })[])
+  const filteredSFBBPacks = filterByLocation(state.sfbbPacks as (SFBBPack & { locationId?: string | null })[])
 
   const value: AppContextType = {
     ...state,
@@ -2079,6 +2234,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     diaryEntries: filteredDiaryEntries,
     weeklyExtraChecks: filteredWeeklyExtraChecks,
     fourWeeklyReviews: filteredFourWeeklyReviews,
+    sfbbPacks: filteredSFBBPacks,
     login,
     register,
     logout,
@@ -2125,6 +2281,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     getWeeklyExtraCheckByWeek,
     addFourWeeklyReview,
     updateFourWeeklyReview,
+    addSFBBPack,
+    updateSFBBPack,
+    deleteSFBBPack,
+    updateSFBBPackSection,
+    signOffSFBBPack,
     addLocation,
     updateLocation,
     deleteLocation,

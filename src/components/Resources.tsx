@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import {
   BookOpenIcon,
   FileTextIcon,
@@ -10,7 +11,10 @@ import {
   ThermometerIcon,
   BugIcon,
   SquareIcon,
+  ChevronRightIcon,
+  CrownIcon,
 } from 'lucide-react'
+import { useAppContext } from '../hooks/useAppContext'
 
 const QUICK_LINKS = [
   {
@@ -111,6 +115,9 @@ const CLEANING_CHEMICALS = [
 ]
 
 export default function Resources() {
+  const { hasFeature, sfbbPacks } = useAppContext()
+  const hasProfessional = hasFeature('sfbb_packs')
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -118,6 +125,35 @@ export default function Resources() {
         <h1 className="text-2xl font-bold text-slate-900">Resources</h1>
         <p className="text-slate-500">Guidance, training & reference materials</p>
       </div>
+
+      {/* Digital SFBB Packs - Featured */}
+      <Link
+        to="/sfbb-packs"
+        className="block bg-gradient-to-br from-sfbb-500 to-sfbb-600 rounded-2xl p-5 text-white"
+      >
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
+            <BookOpenIcon className="w-7 h-7" />
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <h3 className="font-bold text-lg">Digital SFBB Packs</h3>
+              {!hasProfessional && (
+                <span className="px-2 py-0.5 bg-amber-400 text-amber-900 text-xs font-bold rounded-full flex items-center gap-1">
+                  <CrownIcon className="w-3 h-3" />
+                  PRO
+                </span>
+              )}
+            </div>
+            <p className="text-sfbb-100 text-sm mt-1">
+              {sfbbPacks.length > 0
+                ? `${sfbbPacks.length} pack${sfbbPacks.length > 1 ? 's' : ''} created`
+                : 'Fill in your SFBB documentation digitally'}
+            </p>
+          </div>
+          <ChevronRightIcon className="w-6 h-6 text-white/80" />
+        </div>
+      </Link>
 
       {/* Quick Links */}
       <div className="bg-white rounded-2xl shadow-sm overflow-hidden">

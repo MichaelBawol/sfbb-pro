@@ -16,6 +16,7 @@ import Maintenance from './components/Maintenance'
 import Resources from './components/Resources'
 import DiaryAndReview from './components/DiaryAndReview'
 import BulkEntry from './components/BulkEntry'
+import SFBBPacks from './components/SFBBPacks'
 
 function App() {
   const { isAuthenticated, isLoading } = useAppContext()
@@ -49,6 +50,7 @@ function App() {
         <Route path="/waste" element={<WasteManagement />} />
         <Route path="/maintenance" element={<Maintenance />} />
         <Route path="/resources" element={<Resources />} />
+        <Route path="/sfbb-packs" element={<SFBBPacks />} />
         <Route path="/diary" element={<DiaryAndReview />} />
         <Route path="/bulk-entry" element={<BulkEntry />} />
         <Route path="/settings" element={<Settings />} />

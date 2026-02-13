@@ -44,6 +44,7 @@ const allNavItems = [
   { name: 'Employees', href: '/employees', icon: UsersIcon },
   { name: 'Records', href: '/records', icon: FolderIcon },
   { name: 'Resources', href: '/resources', icon: BookOpenIcon },
+  { name: 'SFBB Packs', href: '/sfbb-packs', icon: FileWarning },
   { name: 'Settings', href: '/settings', icon: SettingsIcon },
 ]
 
@@ -67,6 +68,7 @@ const moreNavItems = [
   { name: 'Employees', href: '/employees', icon: UsersIcon },
   { name: 'Records', href: '/records', icon: FolderIcon },
   { name: 'Resources', href: '/resources', icon: BookOpenIcon },
+  { name: 'SFBB Packs', href: '/sfbb-packs', icon: FileWarning },
   { name: 'Settings', href: '/settings', icon: SettingsIcon },
 ]
 

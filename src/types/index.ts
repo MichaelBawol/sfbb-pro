@@ -400,6 +400,7 @@ export type SubscriptionFeature =
   | 'multi_location'
   | 'priority_support'
   | 'advanced_reporting'
+  | 'sfbb_packs'
 
 export const TIER_FEATURES: Record<SubscriptionTier, SubscriptionFeature[]> = {
   free: [
@@ -433,6 +434,7 @@ export const TIER_FEATURES: Record<SubscriptionTier, SubscriptionFeature[]> = {
     'multi_location',
     'priority_support',
     'advanced_reporting',
+    'sfbb_packs',
   ],
   vip: [
     'temperature_logging',
@@ -447,6 +449,7 @@ export const TIER_FEATURES: Record<SubscriptionTier, SubscriptionFeature[]> = {
     'multi_location',
     'priority_support',
     'advanced_reporting',
+    'sfbb_packs',
   ],
 }
 
@@ -460,4 +463,56 @@ export const TIER_LABELS: Record<SubscriptionTier, string> = {
 export const TIER_PRICES: Record<Exclude<SubscriptionTier, 'free' | 'vip'>, string> = {
   starter: '15.00',
   professional: '30.00',
+}
+
+// SFBB Pack Types
+export type SFBBPackType = 'caterer' | 'retailer' | 'care_home' | 'childminder'
+
+export const SFBB_PACK_LABELS: Record<SFBBPackType, string> = {
+  caterer: 'Caterers',
+  retailer: 'Retailers',
+  care_home: 'Care Homes',
+  childminder: 'Childminders',
+}
+
+export const SFBB_PACK_DESCRIPTIONS: Record<SFBBPackType, string> = {
+  caterer: 'For restaurants, cafes, pubs, hotels, and any business preparing and cooking food',
+  retailer: 'For shops, supermarkets, and businesses selling pre-packaged or loose food',
+  care_home: 'For residential care homes preparing food for residents',
+  childminder: 'For childminders and small nurseries preparing food for children',
+}
+
+// SFBB Pack Section - each section in a pack
+export interface SFBBPackSection {
+  id: string
+  key: string
+  title: string
+  description: string
+  fields: SFBBPackField[]
+}
+
+// Field types for pack forms
+export interface SFBBPackField {
+  key: string
+  label: string
+  type: 'text' | 'textarea' | 'checkbox' | 'date' | 'signature' | 'select'
+  options?: string[]
+  required?: boolean
+  placeholder?: string
+  helpText?: string
+}
+
+// Stored pack data
+export interface SFBBPack {
+  id: string
+  packType: SFBBPackType
+  name: string
+  createdAt: string
+  updatedAt: string
+  completedSections: number
+  totalSections: number
+  data: Record<string, Record<string, any>> // sectionKey -> fieldKey -> value
+  signedOff: boolean
+  signedOffBy?: string
+  signedOffAt?: string
 }
