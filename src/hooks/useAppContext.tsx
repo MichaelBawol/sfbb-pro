@@ -170,6 +170,8 @@ interface AppContextType extends AppState {
   clearLocationData: (locationId: string) => Promise<void>
   clearLegacyData: () => Promise<void>
   assignLegacyDataToLocation: (locationId: string) => Promise<void>
+  toggleAllergenSharing: (locationId: string, enabled: boolean) => Promise<string | null>
+  regenerateAllergenShareCode: (locationId: string) => Promise<string | null>
 
   // Subscription actions
   hasFeature: (feature: SubscriptionFeature) => boolean
@@ -717,6 +719,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         email: l.email,
         managerName: l.manager_name,
         isPrimary: l.is_primary,
+        allergenShareEnabled: l.allergen_share_enabled,
+        allergenShareCode: l.allergen_share_code,
       }))
 
       const transformedSFBBPacks: SFBBPack[] = (sfbbPacksData || []).map((p: any) => ({
@@ -1935,6 +1939,75 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setState(prev => ({ ...prev, activeLocationId: id }))
   }
 
+  // Generate a random share code
+  const generateShareCode = (): string => {
+    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789'
+    let result = ''
+    for (let i = 0; i < 8; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length))
+    }
+    return result
+  }
+
+  const toggleAllergenSharing = async (locationId: string, enabled: boolean): Promise<string | null> => {
+    const location = state.locations.find(l => l.id === locationId)
+    if (!location) return null
+
+    let shareCode = location.allergenShareCode
+
+    // Generate a new share code if enabling and no code exists
+    if (enabled && !shareCode) {
+      shareCode = generateShareCode()
+    }
+
+    const { error } = await supabase
+      .from('locations')
+      .update({
+        allergen_share_enabled: enabled,
+        allergen_share_code: shareCode,
+      })
+      .eq('id', locationId)
+
+    if (error) {
+      console.error('Error toggling allergen sharing:', error)
+      return null
+    }
+
+    setState(prev => ({
+      ...prev,
+      locations: prev.locations.map(l =>
+        l.id === locationId
+          ? { ...l, allergenShareEnabled: enabled, allergenShareCode: shareCode }
+          : l
+      ),
+    }))
+
+    return shareCode || null
+  }
+
+  const regenerateAllergenShareCode = async (locationId: string): Promise<string | null> => {
+    const newCode = generateShareCode()
+
+    const { error } = await supabase
+      .from('locations')
+      .update({ allergen_share_code: newCode })
+      .eq('id', locationId)
+
+    if (error) {
+      console.error('Error regenerating share code:', error)
+      return null
+    }
+
+    setState(prev => ({
+      ...prev,
+      locations: prev.locations.map(l =>
+        l.id === locationId ? { ...l, allergenShareCode: newCode } : l
+      ),
+    }))
+
+    return newCode
+  }
+
   // Clear all legacy data (records with null location_id)
   const clearLegacyData = async () => {
     if (!state.supabaseUser) return
@@ -2293,6 +2366,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     clearLocationData,
     clearLegacyData,
     assignLegacyDataToLocation,
+    toggleAllergenSharing,
+    regenerateAllergenShareCode,
     setActiveTab,
     toggleSidebar,
     hasFeature,

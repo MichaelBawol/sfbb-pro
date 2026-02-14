@@ -87,6 +87,8 @@ export interface Location {
   email?: string
   managerName?: string
   isPrimary: boolean
+  allergenShareEnabled?: boolean
+  allergenShareCode?: string
 }
 
 export interface Employee {

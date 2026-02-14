@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { useAppContext } from './hooks/useAppContext'
 import Layout from './components/Layout'
 import Dashboard from './components/Dashboard'
@@ -17,9 +17,23 @@ import Resources from './components/Resources'
 import DiaryAndReview from './components/DiaryAndReview'
 import BulkEntry from './components/BulkEntry'
 import SFBBPacks from './components/SFBBPacks'
+import PublicAllergenMenu from './components/PublicAllergenMenu'
 
 function App() {
   const { isAuthenticated, isLoading } = useAppContext()
+  const location = useLocation()
+
+  // Public routes that don't require authentication
+  const isPublicRoute = location.pathname.startsWith('/menu/')
+
+  // Show public allergen menu without auth check
+  if (isPublicRoute) {
+    return (
+      <Routes>
+        <Route path="/menu/:shareCode" element={<PublicAllergenMenu />} />
+      </Routes>
+    )
+  }
 
   if (isLoading) {
     return (

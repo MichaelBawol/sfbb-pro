@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { QRCodeSVG, QRCodeCanvas } from 'qrcode.react'
 import { useAppContext } from '../hooks/useAppContext'
 import {
   AlertTriangleIcon,
@@ -8,15 +9,40 @@ import {
   TrashIcon,
   XIcon,
   InfoIcon,
+  QrCodeIcon,
+  ShareIcon,
+  CopyIcon,
+  CheckIcon,
+  RefreshCwIcon,
+  ExternalLinkIcon,
 } from 'lucide-react'
 import { Dish, ALLERGENS } from '../types'
 
 export default function Allergens() {
-  const { dishes, addDish, updateDish, deleteDish } = useAppContext()
+  const {
+    dishes,
+    addDish,
+    updateDish,
+    deleteDish,
+    locations,
+    activeLocationId,
+    toggleAllergenSharing,
+    regenerateAllergenShareCode,
+  } = useAppContext()
   const [showForm, setShowForm] = useState(false)
   const [editingDish, setEditingDish] = useState<Dish | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [filterAllergen, setFilterAllergen] = useState<string>('all')
+  const [showQRModal, setShowQRModal] = useState(false)
+  const [copied, setCopied] = useState(false)
+  const [isTogglingShare, setIsTogglingShare] = useState(false)
+
+  // Get active location
+  const activeLocation = locations.find(l => l.id === activeLocationId)
+  const shareUrl = activeLocation?.allergenShareCode
+    ? `${window.location.origin}/menu/${activeLocation.allergenShareCode}`
+    : null
+
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -101,6 +127,32 @@ export default function Allergens() {
     }
   }
 
+  const handleToggleSharing = async () => {
+    if (!activeLocationId) return
+    setIsTogglingShare(true)
+    const newEnabled = !activeLocation?.allergenShareEnabled
+    await toggleAllergenSharing(activeLocationId, newEnabled)
+    setIsTogglingShare(false)
+  }
+
+  const handleRegenerateCode = async () => {
+    if (!activeLocationId) return
+    if (confirm('Generate a new share code? The old link will stop working.')) {
+      await regenerateAllergenShareCode(activeLocationId)
+    }
+  }
+
+  const handleCopyLink = async () => {
+    if (!shareUrl) return
+    try {
+      await navigator.clipboard.writeText(shareUrl)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch (err) {
+      console.error('Failed to copy:', err)
+    }
+  }
+
   // Get allergen counts
   const allergenCounts = ALLERGENS.reduce((acc, allergen) => {
     acc[allergen] = dishes.filter(d => d.allergens.includes(allergen)).length
@@ -135,6 +187,108 @@ export default function Allergens() {
           </p>
         </div>
       </div>
+
+      {/* QR Code Sharing */}
+      {activeLocation && (
+        <div className="card p-4">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-sfbb-100 rounded-full flex items-center justify-center">
+                <QrCodeIcon className="w-5 h-5 text-sfbb-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-slate-900">Share Allergen Menu</h3>
+                <p className="text-sm text-slate-500">Let customers scan a QR code to view allergens</p>
+              </div>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={activeLocation.allergenShareEnabled || false}
+                onChange={handleToggleSharing}
+                disabled={isTogglingShare}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-sfbb-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sfbb-600"></div>
+            </label>
+          </div>
+
+          {activeLocation.allergenShareEnabled && shareUrl && (
+            <div className="mt-4 pt-4 border-t border-slate-100">
+              <div className="flex flex-col sm:flex-row gap-4">
+                {/* QR Code Preview */}
+                <button
+                  onClick={() => setShowQRModal(true)}
+                  className="flex-shrink-0 p-3 bg-white border-2 border-slate-200 rounded-xl hover:border-sfbb-300 transition-colors"
+                >
+                  <QRCodeSVG value={shareUrl} size={80} />
+                </button>
+
+                {/* Share Options */}
+                <div className="flex-1 space-y-3">
+                  <div>
+                    <p className="text-xs font-medium text-slate-500 mb-1">Share Link</p>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={shareUrl}
+                        readOnly
+                        className="input text-sm flex-1 bg-slate-50"
+                      />
+                      <button
+                        onClick={handleCopyLink}
+                        className={`px-3 py-2 rounded-lg font-medium text-sm flex items-center gap-1.5 transition-colors ${
+                          copied
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                        }`}
+                      >
+                        {copied ? (
+                          <>
+                            <CheckIcon className="w-4 h-4" />
+                            Copied
+                          </>
+                        ) : (
+                          <>
+                            <CopyIcon className="w-4 h-4" />
+                            Copy
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => setShowQRModal(true)}
+                      className="px-3 py-1.5 bg-sfbb-100 text-sfbb-700 rounded-lg font-medium text-sm flex items-center gap-1.5 hover:bg-sfbb-200 transition-colors"
+                    >
+                      <QrCodeIcon className="w-4 h-4" />
+                      View QR Code
+                    </button>
+                    <a
+                      href={shareUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-1.5 bg-slate-100 text-slate-700 rounded-lg font-medium text-sm flex items-center gap-1.5 hover:bg-slate-200 transition-colors"
+                    >
+                      <ExternalLinkIcon className="w-4 h-4" />
+                      Preview
+                    </a>
+                    <button
+                      onClick={handleRegenerateCode}
+                      className="px-3 py-1.5 bg-slate-100 text-slate-700 rounded-lg font-medium text-sm flex items-center gap-1.5 hover:bg-slate-200 transition-colors"
+                    >
+                      <RefreshCwIcon className="w-4 h-4" />
+                      New Code
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Search and Filter */}
       <div className="flex flex-col sm:flex-row gap-3">
@@ -360,6 +514,72 @@ export default function Allergens() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* QR Code Modal */}
+      {showQRModal && shareUrl && (
+        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm">
+            <div className="flex items-center justify-between p-4 border-b border-slate-200">
+              <h2 className="text-lg font-semibold text-slate-900">Allergen Menu QR Code</h2>
+              <button
+                onClick={() => setShowQRModal(false)}
+                className="p-1.5 rounded hover:bg-slate-100 text-slate-400"
+              >
+                <XIcon className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 flex flex-col items-center">
+              <div className="bg-white p-4 rounded-xl border-2 border-slate-200 mb-4">
+                <QRCodeSVG value={shareUrl} size={200} />
+              </div>
+              <p className="text-center text-sm text-slate-600 mb-4">
+                Customers can scan this QR code to view your allergen information on their phone.
+              </p>
+              <div className="flex gap-2 w-full">
+                <button
+                  onClick={handleCopyLink}
+                  className={`flex-1 py-2 rounded-lg font-medium text-sm flex items-center justify-center gap-1.5 transition-colors ${
+                    copied
+                      ? 'bg-green-100 text-green-700'
+                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  }`}
+                >
+                  {copied ? (
+                    <>
+                      <CheckIcon className="w-4 h-4" />
+                      Copied!
+                    </>
+                  ) : (
+                    <>
+                      <CopyIcon className="w-4 h-4" />
+                      Copy Link
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => {
+                    const canvas = document.querySelector('#qr-download canvas') as HTMLCanvasElement
+                    if (canvas) {
+                      const link = document.createElement('a')
+                      link.download = 'allergen-menu-qr.png'
+                      link.href = canvas.toDataURL()
+                      link.click()
+                    }
+                  }}
+                  className="flex-1 py-2 bg-sfbb-600 text-white rounded-lg font-medium text-sm flex items-center justify-center gap-1.5 hover:bg-sfbb-700 transition-colors"
+                >
+                  <ShareIcon className="w-4 h-4" />
+                  Download
+                </button>
+              </div>
+              {/* Hidden canvas for download */}
+              <div id="qr-download" style={{ position: 'absolute', left: '-9999px' }}>
+                <QRCodeCanvas value={shareUrl} size={400} />
+              </div>
+            </div>
           </div>
         </div>
       )}
